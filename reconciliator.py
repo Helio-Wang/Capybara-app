@@ -1,5 +1,5 @@
-from solution import Association, NestedSolution, SolutionGeneratorCounter
-from event_vector import SolutionGeneratorEventVector
+from solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter
+from event_vector import SolutionGeneratorEventVectorCounter
 
 
 class Reconciliator:
@@ -212,17 +212,17 @@ class Reconciliator:
                                                 self.subtree_matrix[parasite.index][host.right_child.index])
 
 
-class ReconciliatorCount(Reconciliator):
+class ReconciliatorCounter(Reconciliator):
     def __init__(self, host_tree, parasite_tree, leaf_map,
-                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshould, task):
+                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task):
 
         super().__init__(host_tree, parasite_tree, leaf_map,
-                         cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshould)
+                         cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
         if task == 0:
             self.solution_generator = SolutionGeneratorCounter()
         elif task == 1:
-            self.solution_generator = SolutionGeneratorEventVector()
+            self.solution_generator = SolutionGeneratorEventVectorCounter()
         else:
-            raise NotImplementedError
+            self.solution_generator = SolutionGenerator(False)
         self.init_matrices()
 

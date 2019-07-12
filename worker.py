@@ -1,6 +1,8 @@
 import datetime
+import time
 import PyQt5 as qt
 import reconciliator
+import enumerate_classes as cla
 
 
 class WorkerData:
@@ -11,12 +13,17 @@ class WorkerData:
         self.multiplier = 1000
 
     def count_solutions(self, cost_vector, task):
-        recon = reconciliator.ReconciliatorCount(self.host_tree, self.parasite_tree, self.leaf_map,
-                                                 cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
-                                                 cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
-                                                 float('Inf'), task)
+        recon = reconciliator.ReconciliatorCounter(self.host_tree, self.parasite_tree, self.leaf_map,
+                                                   cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
+                                                   cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
+                                                   float('Inf'), task)
         root = recon.run()
-        return root.cost / self.multiplier, root
+        opt_cost = root.cost / self.multiplier
+
+        if task in (2, 3):
+            reachable = cla.fill_reachable_matrix(self.parasite_tree, self.host_tree, root)
+            root = cla.fill_class_matrix(self.parasite_tree, self.host_tree, self.leaf_map, reachable, task)
+        return opt_cost, root
 
 
 class CountThread(qt.QtCore.QThread):
@@ -31,16 +38,24 @@ class CountThread(qt.QtCore.QThread):
         self.cost_vector = options[1:5]
         self.tasks = options[5:]
 
+    def print_header(self, task):
+        if task == 0:
+            self.sig1.emit(f'Task {task+1}: Counting the number of solutions (cyclic or acyclic)...')
+        elif task == 1:
+            self.sig1.emit(f'Task {task+1}: Counting the number of solutions grouped by event vectors...')
+        elif task == 2:
+            self.sig1.emit(f'Task {task+1}: Counting the number of event partitions...')
+        else:
+            self.sig1.emit(f'Task {task+1}: Counting the number of strong equivalence classes...')
+
     def run(self):
         self.sig1.emit('===============')
-        self.sig1.emit(f'<b>New job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</b>')
+        self.sig1.emit(f'Job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        t0 = time.time()
         self.sig1.emit(f'Cost vector: {tuple(self.cost_vector)}')
         self.sig1.emit('------')
         for task in self.tasks:
-            if task == 0:
-                self.sig1.emit(f'Task {task+1}: Counting the number of solutions (cyclic or acyclic)...')
-            elif task == 1:
-                self.sig1.emit(f'Task {task+1}: Counting the number of solutions grouped by event vectors...')
+            self.print_header(task)
 
             opt_cost, root = self.data.count_solutions(self.cost_vector, task)
             if task == 0:
@@ -53,9 +68,16 @@ class CountThread(qt.QtCore.QThread):
                     self.sig1.emit(f"{num_class}: {target_vector.vector} of size {target_vector.num_subsolutions}")
                     num_sol += target_vector.num_subsolutions
                 self.sig1.emit(f'Total number of solutions = {num_sol}')
+            elif task == 2:
+                self.sig1.emit(f'Total number of event partitions = {root.num_subsolutions}')
+            else:
+                self.sig1.emit(f'Total number of strong equivalence classes = {root.num_subsolutions}')
 
-            self.sig1.emit('Optimal cost = {}'.format(opt_cost))
             self.sig1.emit('------')
+        self.sig1.emit('Optimal cost = {}'.format(opt_cost))
+        self.sig1.emit('------')
+        self.sig1.emit(f'Job finished at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.sig1.emit(f'Time elapsed: {time.time() - t0:.2f} s')
         self.sig1.emit('===============')
         self.sig1.emit('')
 
