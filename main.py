@@ -63,6 +63,21 @@ def save_dialog():
     return True, filename
 
 
+class EnumerateDialog(qtw.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('Enumeration options')
+        layout = qtw.QVBoxLayout()
+        self.buttons = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel,
+                                            qt.QtCore.Qt.Horizontal, self)
+        layout.addWidget(self.buttons)
+        layout.setContentsMargins(30, 30, 5, 10)
+        self.setLayout(layout)
+
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+
+
 class CostVectorBox(qtw.QGroupBox):
     def __init__(self):
         super().__init__()
@@ -185,7 +200,7 @@ class AppWindow(qtw.QWidget):
 
         self.count_thread = worker.CountThread()
         self.sig.connect(self.count_thread.on_source)
-        self.count_thread.sig1.connect(self.count_output)
+        self.count_thread.sig.connect(self.count_output)
         self.data = None
         self.reset()
         self.has_output = False
@@ -232,7 +247,7 @@ class AppWindow(qtw.QWidget):
         self.btnSave.setEnabled(False)
 
     def open_event(self):
-        if self.has_output:
+        if self.has_output and self.unsaved:
             msg = qtw.QMessageBox.warning(None, 'Confirm new input',
                                           'The current output will be lost if unsaved.\n'
                                           'Do you want to continue?',
@@ -282,7 +297,12 @@ class AppWindow(qtw.QWidget):
             self.out_thread()
 
     def enumerate_event(self):
-        pass
+        if len(self.taskBox.tasks) > 1:
+            qtw.QMessageBox.critical(None, 'Error', 'Choose one task at a time for enumeration.', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            return
+
+        dlg = EnumerateDialog()
+        dlg.exec()
 
     def save_event(self):
         success, filename = save_dialog()
