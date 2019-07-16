@@ -52,8 +52,8 @@ def open_dialog():
     return True, filename
 
 
-def save_dialog():
-    filename, _ = qtw.QFileDialog.getSaveFileName(None, 'Save the output log file', 'log.txt',
+def save_dialog(default_name):
+    filename, _ = qtw.QFileDialog.getSaveFileName(None, 'Save the output file', default_name,
                                                   'Text Files (*.txt) ;; All Files (*)',
                                                   options=qtw.QFileDialog.Options()
                                                         | qtw.QFileDialog.DontUseNativeDialog
@@ -64,18 +64,68 @@ def save_dialog():
 
 
 class EnumerateDialog(qtw.QDialog):
-    def __init__(self):
+    def __init__(self, filename, task):
         super().__init__()
+        self.task = task
         self.setWindowTitle('Enumeration options')
+        self.nameBox = qtw.QLineEdit()
+        self.nameBox.setReadOnly(True)
+        self.nameBox.setText(filename)
+
+        groupBox = qtw.QGroupBox('Maximum number of output')
+        infiniteButton = qtw.QRadioButton('Unlimited')
+        infiniteButton.setChecked(True)
+        limitedButton = qtw.QRadioButton('Max')
+        self.limitedText = qtw.QLineEdit()
+        self.limitedText.setEnabled(False)
+        limitedButton.toggled.connect(self.change_limit)
+        vlayout = qtw.QVBoxLayout()
+        vlayout.addWidget(infiniteButton)
+        hlayout = qtw.QHBoxLayout()
+        hlayout.addWidget(limitedButton)
+        hlayout.addWidget(self.limitedText)
+        vlayout.addLayout(hlayout)
+        groupBox.setLayout(vlayout)
+        groupBox.setMaximumHeight(200)
+
+        groupBox2 = qtw.QGroupBox('Output file')
+        vlayout2 = qtw.QVBoxLayout()
+        vlayout2.addWidget(self.nameBox)
+        groupBox2.setLayout(vlayout2)
+
         layout = qtw.QVBoxLayout()
-        self.buttons = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel,
-                                            qt.QtCore.Qt.Horizontal, self)
-        layout.addWidget(self.buttons)
+        layout.addWidget(groupBox2)
+        layout.addWidget(groupBox)
+
+        if self.task == 1:
+            groupBox3 = qtw.QGroupBox('Event vector enumeration')
+            vlayout3 = qtw.QVBoxLayout()
+            onlyButton = qtw.QRadioButton('Vectors only')
+            onlyButton.setChecked(True)
+            bothButton = qtw.QRadioButton('Vector and one reconciliation')
+            vlayout3.addWidget(onlyButton)
+            vlayout3.addWidget(bothButton)
+            groupBox3.setLayout(vlayout3)
+            layout.addWidget(groupBox3)
+
+        buttons = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel,
+                                       qt.QtCore.Qt.Horizontal, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+        layout.addWidget(buttons)
+        layout.setSpacing(15)
         layout.setContentsMargins(30, 30, 5, 10)
         self.setLayout(layout)
+        self.resize(500, 300)
 
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
+    def change_limit(self, checked):
+        if checked:
+            self.limitedText.setEnabled(True)
+            self.limitedText.setText('1000')
+        else:
+            self.limitedText.setEnabled(False)
+            self.limitedText.clear()
 
 
 class CostVectorBox(qtw.QGroupBox):
@@ -298,14 +348,18 @@ class AppWindow(qtw.QWidget):
 
     def enumerate_event(self):
         if len(self.taskBox.tasks) > 1:
-            qtw.QMessageBox.critical(None, 'Error', 'Choose one task at a time for enumeration.', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(None, 'Error', 'Choose one task at a time for enumeration.',
+                                     qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             return
-
-        dlg = EnumerateDialog()
+        task = list(self.taskBox.tasks).pop()
+        success, filename = save_dialog('output.txt')
+        if not success:
+            return
+        dlg = EnumerateDialog(filename, task)
         dlg.exec()
 
     def save_event(self):
-        success, filename = save_dialog()
+        success, filename = save_dialog('log.txt')
         if not success:
             return
         with open(filename, 'w') as f:
