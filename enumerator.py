@@ -42,13 +42,14 @@ class SolutionIterator:
 
 
 class SolutionsEnumerator:
-    def __init__(self, root, writer, config, maximum=float('Inf')):
+    def __init__(self, data, root, writer, maximum, acyclic):
+        self.data = data
         self.root = root
         self.merge_stack = []
         self.current_index = 0
         self.writer = writer
-        self.config = config
         self.maximum = maximum
+        self.acyclic = acyclic
 
         self.current_mapping = {}
         self.current_text = []  # text for the printing the current solution
@@ -75,22 +76,20 @@ class SolutionsEnumerator:
             self.clean_stack()
 
             # is the current solution acyclic?
-            transfer_edges = cyclicity.find_transfer_edges(self.config.host_tree,
-                                                           self.current_mapping, self.transfer_candidates)
-            if not transfer_edges:
-                is_acyclic = True
-            else:
-                is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
+            is_acyclic = False
+            if self.acyclic:
+                transfer_edges = cyclicity.find_transfer_edges(self.data.host_tree,
+                                                               self.current_mapping, self.transfer_candidates)
+                if not transfer_edges:
+                    is_acyclic = True
+                else:
+                    is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
 
-            # write the solution only if it is acyclic
-            if True:   # is_acyclic
+            # write the solution only if it is acyclic, or if the user wants both
+            if not self.acyclic or is_acyclic:
                 num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
-                if self.config.k is not None or self.config.alpha is not None:
-                    self.writer.write('\n#Cost = {}\n'.format(self.config.format_string)
-                                      .format(iterator.final_cost / self.config.multiplier))
-                else:
-                    self.writer.write('\n')
+                self.writer.write('\n')
 
             if not self.merge_stack:
                 break
@@ -141,12 +140,4 @@ class SolutionsEnumerator:
             child_index = self.merge_stack[self.current_index][1]
             return iterator.get_child(child_index)
 
-
-def enumerate_solutions(root, writer, config, maximum=float('Inf')):
-    enumerator = SolutionsEnumerator(root, writer, config, maximum)
-    num_solutions, num_acyclic = enumerator.run()
-
-    if maximum == float('Inf'):
-        writer.write('#Total number of acyclic solutions = {:d}\n'.format(num_acyclic))
-        print('Total number of acyclic solutions = {:d} out of {:d}'.format(num_acyclic, num_solutions))
 

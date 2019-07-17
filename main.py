@@ -79,6 +79,7 @@ class EnumerateDialog(qtw.QDialog):
         self.limitedText = qtw.QLineEdit()
         self.limitedText.setEnabled(False)
         limitedButton.toggled.connect(self.change_limit)
+        self.limitedText.editingFinished.connect(self.validate_limit)
         vlayout = qtw.QVBoxLayout()
         vlayout.addWidget(infiniteButton)
         hlayout = qtw.QHBoxLayout()
@@ -97,12 +98,27 @@ class EnumerateDialog(qtw.QDialog):
         layout.addWidget(groupBox2)
         layout.addWidget(groupBox)
 
-        if self.task == 1:
-            groupBox3 = qtw.QGroupBox('Event vector enumeration')
+        self.filter_cyclic = False
+        self.vector_output = False
+        if self.task == 0:
+            groupBox3 = qtw.QGroupBox('Filter out cyclic solutions ')
             vlayout3 = qtw.QVBoxLayout()
-            onlyButton = qtw.QRadioButton('Vectors only')
+            onlyButton = qtw.QRadioButton('Keep only acyclic (slower)')
+            bothButton = qtw.QRadioButton('Keep both cyclic and acyclic')
+            bothButton.setChecked(True)
+            onlyButton.toggled.connect(self.change_cyclic)
+            vlayout3.addWidget(bothButton)
+            vlayout3.addWidget(onlyButton)
+            groupBox3.setLayout(vlayout3)
+            layout.addWidget(groupBox3)
+
+        elif self.task == 1:
+            groupBox3 = qtw.QGroupBox('Event vector enumeration ')
+            vlayout3 = qtw.QVBoxLayout()
+            onlyButton = qtw.QRadioButton('Reconciliation only')
             onlyButton.setChecked(True)
-            bothButton = qtw.QRadioButton('Vector and one reconciliation')
+            bothButton = qtw.QRadioButton('Output the event vector (in comment) with the reconciliation')
+            bothButton.toggled.connect(self.check_vector_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
             groupBox3.setLayout(vlayout3)
@@ -126,6 +142,19 @@ class EnumerateDialog(qtw.QDialog):
         else:
             self.limitedText.setEnabled(False)
             self.limitedText.clear()
+
+    def validate_limit(self):
+        try:
+            _ = int(self.limitedText.text())
+        except ValueError:
+            qtw.QMessageBox.critical(None, 'Error', 'Limit must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            self.limitedText.setText('1000')
+
+    def change_cyclic(self, checked):
+        self.filter_cyclic = checked
+
+    def check_vector_output(self, checked):
+        self.vector_output = checked
 
 
 class CostVectorBox(qtw.QGroupBox):
@@ -177,6 +206,7 @@ class TaskBox(qtw.QGroupBox):
         self.setTitle('Task')
         self.setMaximumWidth(300)
         self.tasks = {0}
+        self.last_check = None
 
         self.boxAll = qtw.QCheckBox('T1: All solutions')
         self.boxEq1 = qtw.QCheckBox('T2: Event vectors')
@@ -197,16 +227,15 @@ class TaskBox(qtw.QGroupBox):
 
     def validate(self, task, box):
         if box.isChecked():
+            self.last_check = box
             self.tasks.add(task)
         else:
             self.tasks.remove(task)
-        if not self.tasks:
-            qtw.QMessageBox.critical(None, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
-            box.setChecked(True)
 
 
 class AppWindow(qtw.QWidget):
     sig = qt.QtCore.pyqtSignal(list)
+    sig2 = qt.QtCore.pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -250,7 +279,12 @@ class AppWindow(qtw.QWidget):
 
         self.count_thread = worker.CountThread()
         self.sig.connect(self.count_thread.on_source)
-        self.count_thread.sig.connect(self.count_output)
+        self.count_thread.sig.connect(self.thread_output)
+
+        self.enum_thread = worker.EnumerateThread()
+        self.sig2.connect(self.enum_thread.on_source)
+        self.enum_thread.sig.connect(self.thread_output)
+
         self.data = None
         self.reset()
         self.has_output = False
@@ -336,17 +370,25 @@ class AppWindow(qtw.QWidget):
         self.btnSave.setEnabled(True)
         return True
 
-    def count_event(self):
-        self.sig.emit([self.data] + self.costVectorBox.cost_vector + sorted(list(self.taskBox.tasks)))
-        self.count_thread.start()
-        self.in_thread()
-
-    def count_output(self, text):
+    def thread_output(self, text):
         self.outTextBox.append(text)
         if not text:
             self.out_thread()
 
+    def count_event(self):
+        if not self.taskBox.tasks:
+            qtw.QMessageBox.critical(None, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            self.taskBox.last_check.setChecked(True)
+            return
+        self.sig.emit([self.data] + self.costVectorBox.cost_vector + sorted(list(self.taskBox.tasks)))
+        self.count_thread.start()
+        self.in_thread()
+
     def enumerate_event(self):
+        if not self.taskBox.tasks:
+            qtw.QMessageBox.critical(None, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            self.taskBox.last_check.setChecked(True)
+            return
         if len(self.taskBox.tasks) > 1:
             qtw.QMessageBox.critical(None, 'Error', 'Choose one task at a time for enumeration.',
                                      qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
@@ -356,7 +398,16 @@ class AppWindow(qtw.QWidget):
         if not success:
             return
         dlg = EnumerateDialog(filename, task)
-        dlg.exec()
+        if dlg.exec() == qtw.QDialog.Rejected:
+            return
+        if not dlg.limitedText.text():
+            max_nb = float('Inf')
+        else:
+            max_nb = int(dlg.limitedText.text())
+        self.sig2.emit([self.data] + self.costVectorBox.cost_vector + [task, filename, max_nb,
+                                                                       dlg.filter_cyclic, dlg.vector_output])
+        self.enum_thread.start()
+        self.in_thread()
 
     def save_event(self):
         success, filename = save_dialog('log.txt')
