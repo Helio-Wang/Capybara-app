@@ -109,6 +109,7 @@ class SolutionGeneratorEventVector(SolutionGenerator):
                 children.append(solution)
 
         new_event_vectors = {EventVector(v.vector, v.num_subsolutions) for v in first.event_vectors}
+        new_event_vectors.update(second.event_vectors)
         return NestedSolutionEventVector(first.cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children,
                                          new_event_vectors)
 

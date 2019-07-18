@@ -1,5 +1,5 @@
 from solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter
-from event_vector import SolutionGeneratorEventVectorCounter
+from event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
 
 
 class Reconciliator:
@@ -224,5 +224,21 @@ class ReconciliatorCounter(Reconciliator):
             self.solution_generator = SolutionGeneratorEventVectorCounter()
         else:
             self.solution_generator = SolutionGenerator(False)
+        self.init_matrices()
+
+
+class ReconciliatorEnumerater(Reconciliator):
+    def __init__(self, host_tree, parasite_tree, leaf_map,
+                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum):
+
+        super().__init__(host_tree, parasite_tree, leaf_map,
+                         cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
+        if task != 1:
+            if maximum == float('Inf'):
+                self.solution_generator = SolutionGeneratorCounter()
+            else:
+                self.solution_generator = SolutionGenerator(False)
+        else:
+            self.solution_generator = SolutionGeneratorEventVector()
         self.init_matrices()
 

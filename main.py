@@ -117,7 +117,7 @@ class EnumerateDialog(qtw.QDialog):
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Reconciliation only')
             onlyButton.setChecked(True)
-            bothButton = qtw.QRadioButton('Output the event vector (in comment) with the reconciliation')
+            bothButton = qtw.QRadioButton('Output the event vector (as caption) with the reconciliation')
             bothButton.toggled.connect(self.check_vector_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
