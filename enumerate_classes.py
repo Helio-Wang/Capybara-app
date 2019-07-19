@@ -19,10 +19,8 @@ def fill_reachable_matrix(parasite_tree, host_tree, optimal_solutions):
         for h_index in range(host_tree.size()):
             for node in reachable[p.index][h_index]:
                 for left_child in flatten(node.children[0]):
-                    assert left_child.association.parasite.index == p1.index
                     reachable[p1.index][left_child.association.host.index].add(left_child)
                 for right_child in flatten(node.children[1]):
-                    assert right_child.association.parasite.index == p2.index
                     reachable[p2.index][right_child.association.host.index].add(right_child)
         fill(p1)
         fill(p2)

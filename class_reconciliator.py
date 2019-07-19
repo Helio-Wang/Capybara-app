@@ -1,9 +1,9 @@
 from solution import Association, NestedSolution
-from reconciliator import ReconciliatorEnumerater
+from reconciliator import ReconciliatorEnumerator
 from util import full_flatten
 
 
-class ReconValidator(ReconciliatorEnumerater):
+class ReconValidator(ReconciliatorEnumerator):
     def __init__(self, host_tree, parasite_tree, leaf_map,
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task,
                  mapping, events):
@@ -22,7 +22,6 @@ class ReconValidator(ReconciliatorEnumerater):
             if event == NestedSolution.DUPLICATION:
                 best_solution = self.duplication_leaf_solution(parasite, host, association)
             elif event == NestedSolution.HOST_SWITCH:
-                assert self.mapping[parasite] is None
                 best_solution = self.transfer_solution(parasite, host, association)
             else:
                 best_solution = self.solution_generator.empty_solution()
@@ -34,7 +33,6 @@ class ReconValidator(ReconciliatorEnumerater):
             if event == NestedSolution.DUPLICATION:
                 best_solution = self.duplication_solution(parasite, host, association)
             elif event == NestedSolution.HOST_SWITCH:
-                assert self.mapping[parasite] is None
                 best_solution = self.transfer_solution(parasite, host, association)
             else:
                 best_solution = self.cospeciation_solution(parasite, host, association)

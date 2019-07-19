@@ -103,7 +103,6 @@ class SolutionGeneratorEventVector(SolutionGenerator):
         children = []
         for solution in [first, second]:
             if solution.composition_type == NestedSolution.MULTIPLE:
-                assert all(c.composition_type != NestedSolution.MULTIPLE for c in solution.children)
                 children.extend(solution.children)
             else:
                 children.append(solution)
@@ -148,7 +147,6 @@ class SolutionGeneratorEventVectorCounter(SolutionGeneratorEventVector):
         children = []
         for solution in [first, second]:
             if solution.composition_type == NestedSolution.MULTIPLE:
-                assert all(c.composition_type != NestedSolution.MULTIPLE for c in solution.children)
                 children.extend(solution.children)
             else:
                 children.append(solution)

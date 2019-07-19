@@ -152,7 +152,6 @@ def get_associations(node):
         yield node.association
     else:
         asso_set = set(child.association for child in node.children)
-        assert len(asso_set) >= 1
         for association in asso_set:
             yield association
 
@@ -208,12 +207,10 @@ def count_event_vector(parasite_tree, host_tree, mapping):
         h1, h2 = mapping[p1], mapping[p2]
 
         if not h.is_ancestor_of(h1):  # (p,p1) is the transfer edge
-            assert h.is_ancestor_of(h2), '%s %s %s' % (str(p), str(h), str(h2))
             c += 1
             d += distance(h, h2)
 
         elif not h.is_ancestor_of(h2):  # (p,p2) is the transfer edge
-            assert h.is_ancestor_of(h1), '%s %s %s' % (str(p), str(h), str(h1))
             c += 1
             d += distance(h, h1)
 
@@ -226,3 +223,4 @@ def count_event_vector(parasite_tree, host_tree, mapping):
             else:  # duplication
                 b += 1
     return a, b, c, d
+

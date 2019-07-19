@@ -1,4 +1,4 @@
-from solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter
+from solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter, BestKSolutionGenerator
 from event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
 
 
@@ -227,10 +227,9 @@ class ReconciliatorCounter(Reconciliator):
         self.init_matrices()
 
 
-class ReconciliatorEnumerater(Reconciliator):
+class ReconciliatorEnumerator(Reconciliator):
     def __init__(self, host_tree, parasite_tree, leaf_map,
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum):
-
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
         if task != 1:
@@ -241,4 +240,21 @@ class ReconciliatorEnumerater(Reconciliator):
         else:
             self.solution_generator = SolutionGeneratorEventVector()
         self.init_matrices()
+
+
+class ReconciliatorBestKEnumerator(Reconciliator):
+    def __init__(self, host_tree, parasite_tree, leaf_map,
+                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, k):
+        super().__init__(host_tree, parasite_tree, leaf_map,
+                         cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
+        self.solution_generator = BestKSolutionGenerator(k)
+        self.init_matrices()
+        self.maximum_cost = -float('Inf')
+
+    def run(self):
+        self.fill_matrices()
+        root = self.finishing_up()
+        for solution in root.children:
+            self.maximum_cost = max(solution.cost, self.maximum_cost)
+        return root
 

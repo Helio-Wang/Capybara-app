@@ -53,10 +53,6 @@ class NestedClass(NestedSolution):
             for b in children:
                 if a < b or a == b:
                     continue
-                assert not (a.less_than(b) or b.less_than(a))
-                assert not a.is_partner(b)[0]
-                assert not a.is_friend(b)[0]
-
         return NestedClassWrapper.unwrap(children)
 
 
@@ -242,9 +238,7 @@ class NestedClassWrapper:
 
     @staticmethod
     def reduce(class_set):
-        u = 0
         while True:
-            u += 1
             to_remove = set()
             to_add = set()
             for a in class_set:
@@ -266,10 +260,6 @@ class NestedClassWrapper:
                     else:
                         is_friend, first_baby, second_baby, third_baby = a.is_friend(b)
                         if is_friend:
-                            assert not first_baby.is_friend(second_baby)[0]
-                            if third_baby is not None:
-                                assert not second_baby.is_friend(third_baby)[0]
-                                assert not first_baby.is_friend(third_baby)[0]
                             to_remove.add(a)
                             to_remove.add(b)
                             to_add.add(first_baby)
@@ -286,7 +276,6 @@ class NestedClassWrapper:
             class_set.update(to_add)
             if not to_add:
                 break
-            assert u < 1000, ' '.join(map(lambda x: str(x.solution) + '-' + '.'.join(map(lambda x: '.'.join(map(str, flatten(x))), x.solution.children)), class_set))
 
     @staticmethod
     def simple_reduce(class_set):

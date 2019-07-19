@@ -247,7 +247,7 @@ class TaskBox(qtw.QGroupBox):
             self.tasks.remove(task)
 
 
-class AppWindow(qtw.QWidget):
+class MainAppWindow(qtw.QWidget):
     sig = qt.QtCore.pyqtSignal(list)
     sig2 = qt.QtCore.pyqtSignal(list)
 
@@ -256,6 +256,16 @@ class AppWindow(qtw.QWidget):
         self.setMinimumWidth(800)
         self.setMinimumHeight(800)
 
+        self.create_widget()
+        self.set_layout()
+        self.start_thread()
+
+        self.data = None
+        self.reset()
+        self.has_output = False
+        self.unsaved = False
+
+    def create_widget(self):
         self.btnOpen = qtw.QPushButton('Open', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton))
         self.btnOpen.setToolTip('<b>Open</b> a Nexus file')
         self.btnOpen.setFixedSize(105, 50)
@@ -289,8 +299,7 @@ class AppWindow(qtw.QWidget):
         self.costVectorBox = CostVectorBox()
         self.taskBox = TaskBox()
 
-        self.set_layout()
-
+    def start_thread(self):
         self.count_thread = worker.CountThread()
         self.sig.connect(self.count_thread.on_source)
         self.count_thread.sig.connect(self.thread_output)
@@ -298,11 +307,6 @@ class AppWindow(qtw.QWidget):
         self.enum_thread = worker.EnumerateThread()
         self.sig2.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
-
-        self.data = None
-        self.reset()
-        self.has_output = False
-        self.unsaved = False
 
     def set_layout(self):
         main_layout = qtw.QVBoxLayout()
@@ -461,9 +465,129 @@ class AppWindow(qtw.QWidget):
             event.ignore()
 
 
+class SuboptWindow(MainAppWindow):
+    sig = qt.QtCore.pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+        self.acyclic_only = False
+
+    def create_widget(self):
+        super().create_widget()
+        self.btnCount.setVisible(False)
+        self.taskBox.setVisible(False)
+
+        self.groupBox = qtw.QGroupBox('Maximum number of output.')
+        self.limitText = qtw.QLineEdit()
+        self.limitText.editingFinished.connect(self.validate_limit)
+        self.limitText.setText('100')
+        hlayout = qtw.QHBoxLayout()
+        hlayout.addWidget(qtw.QLabel('K '))
+        hlayout.addWidget(self.limitText)
+        self.groupBox.setLayout(hlayout)
+        self.groupBox.setMaximumHeight(200)
+
+        self.groupBox2 = qtw.QGroupBox('Filter out cyclic solutions?. ')
+        vlayout2 = qtw.QVBoxLayout()
+        onlyButton = qtw.QRadioButton('Keep only acyclic (slower)')
+        bothButton = qtw.QRadioButton('Keep both cyclic and acyclic')
+        bothButton.setChecked(True)
+        onlyButton.toggled.connect(self.change_cyclic)
+        vlayout2.addWidget(bothButton)
+        vlayout2.addWidget(onlyButton)
+        self.groupBox2.setLayout(vlayout2)
+
+    def set_layout(self):
+        main_layout = qtw.QVBoxLayout()
+        hlayout = qtw.QHBoxLayout()
+        hlayout.addWidget(self.btnOpen)
+        hlayout.addWidget(self.costVectorBox)
+        vlayout = qtw.QVBoxLayout()
+        vlayout.addWidget(self.groupBox)
+        vlayout.addWidget(self.groupBox2)
+        hlayout.addLayout(vlayout)
+        hlayout.addWidget(self.btnEnumerate)
+        hlayout.setSpacing(30)
+        main_layout.addLayout(hlayout)
+        main_layout.addItem(qtw.QSpacerItem(10, 10))
+
+        glayout = qtw.QGridLayout()
+        glayout.addWidget(qtw.QLabel('Input file'), 1, 1, qt.QtCore.Qt.AlignTop)
+        glayout.addWidget(self.inNameBox, 1, 2)
+        glayout.addWidget(qtw.QLabel('Input\nSummary'), 2, 1, qt.QtCore.Qt.AlignTop)
+        glayout.addWidget(self.summaryTextBox, 2, 2)
+        vlayout = qtw.QVBoxLayout()
+        vlayout.addWidget(qtw.QLabel('Output'))
+        vlayout.addWidget(self.btnSave)
+        glayout.addLayout(vlayout, 3, 1, qt.QtCore.Qt.AlignTop)
+        glayout.addWidget(self.outTextBox, 3, 2)
+        glayout.setSpacing(10)
+        main_layout.addLayout(glayout)
+        main_layout.setContentsMargins(30, 30, 30, 30)
+        self.setLayout(main_layout)
+
+    def validate_limit(self):
+        try:
+            x = int(self.limitText.text())
+            if x < 1:
+                qtw.QMessageBox.critical(None, 'Error', 'K must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+                self.limitText.setText('100')
+        except ValueError:
+            qtw.QMessageBox.critical(None, 'Error', 'K must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            self.limitText.setText('100')
+
+    def change_cyclic(self, checked):
+        self.acyclic_only = checked
+
+    def start_thread(self):
+        self.enum_thread = worker.BestKEnumerateThread()
+        self.sig.connect(self.enum_thread.on_source)
+        self.enum_thread.sig.connect(self.thread_output)
+
+    def enumerate_event(self):
+        success, filename = save_dialog('output.txt')
+        if not success:
+            return
+        self.sig.emit([self.data] + self.costVectorBox.cost_vector
+                      + [filename, int(self.limitText.text()), self.acyclic_only])
+        self.enum_thread.start()
+        self.in_thread()
+
+
+class WelcomeWindow(qtw.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(300)
+        vlayout = qtw.QVBoxLayout()
+        vlayout.setSpacing(10)
+        main_button = qtw.QPushButton('Standard counting and enumeration')
+        subopt_button = qtw.QPushButton('Sub-optimal enumeration')
+
+        for b in (main_button, subopt_button):
+            b.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
+
+        self.choice = None
+        main_button.clicked.connect(lambda: self.choose(1))
+        subopt_button.clicked.connect(lambda: self.choose(2))
+        vlayout.addWidget(main_button)
+        vlayout.addWidget(subopt_button)
+        self.setLayout(vlayout)
+        self.show()
+
+    def choose(self, choice):
+        self.choice = choice
+        self.accept()
+
+
 if __name__ == '__main__':
     app = qtw.QApplication(sys.argv)
-    widget = AppWindow()
+    welcome = WelcomeWindow()
+    welcome.exec()
+    if welcome.choice == 1:
+        widget = MainAppWindow()
+    else:
+        widget = SuboptWindow()
     widget.show()
     widget.move(qtw.QApplication.desktop().screen().rect().center() - widget.rect().center())
     app.exec_()

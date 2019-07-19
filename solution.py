@@ -62,7 +62,6 @@ class SolutionGenerator:
         return SolutionGenerator.EMPTY
 
     def from_leaf_association(self, association, loss_cost=0, distance=0):
-        assert association is not None
         return NestedSolution(loss_cost * distance, association,
                               NestedSolution.FINAL,
                               NestedSolution.LEAF, self.accumulate, [])
@@ -90,13 +89,11 @@ class SolutionGenerator:
         return best
 
     def merge(self, first, second):
-        assert first.cost == second.cost
         if first.cost == float('Inf'):
             return self.empty_solution()
         children = []
         for solution in [first, second]:
             if solution.composition_type == NestedSolution.MULTIPLE:
-                assert all(c.composition_type != NestedSolution.MULTIPLE for c in solution.children)
                 children.extend(solution.children)
             else:
                 children.append(solution)
@@ -108,7 +105,6 @@ class SolutionGeneratorCounter(SolutionGenerator):
         super().__init__(True)
 
     def merge(self, first, second):
-        assert first.cost == second.cost
         if first.cost == float('Inf'):
             return self.empty_solution()
         return NestedSolution(first.cost, None, NestedSolution.MULTIPLE, None, self.accumulate, [first, second])
@@ -178,7 +174,6 @@ class BestKSolutionGenerator(SolutionGenerator):
             return NestedSolution(first.cost, None, NestedSolution.MULTIPLE, None, self.accumulate,
                                   [first, second] if first.cost < second.cost else [second, first])
 
-        # there are between 2 and 2k solutions to merge
         first_candidates, second_candidates = [first], [second]
         if first.composition_type == NestedSolution.MULTIPLE:
             first_candidates = first.children
@@ -190,10 +185,6 @@ class BestKSolutionGenerator(SolutionGenerator):
                 return first_candidates[0]
             else:
                 return second_candidates[0]
-
-        assert tuple(sorted([u.cost for u in first_candidates])) == tuple([u.cost for u in first_candidates])
-        assert tuple(sorted([u.cost for u in second_candidates])) == tuple([u.cost for u in second_candidates])
-        assert all([u.composition_type != NestedSolution.MULTIPLE for u in first_candidates + second_candidates])
 
         # merge two arrays of solutions with sorted costs
         children = []
@@ -221,109 +212,18 @@ class BestKSolutionGenerator(SolutionGenerator):
 
         return NestedSolution(children[0].cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children)
 
-
-class AlphaBoundSolutionGenerator(SolutionGenerator):
-    def __init__(self, alpha, accumulate):
-        super().__init__(accumulate)
-        self.alpha = alpha
-
-    def cartesian(self, new_cost, first, second, association, event, num_losses):
-        if first.cost == float('Inf') or second.cost == float('Inf'):
-            return self.empty_solution()
-
-        if first.composition_type != NestedSolution.MULTIPLE and second.composition_type != NestedSolution.MULTIPLE:
-            cost = new_cost + first.cost + second.cost
-            return NestedSolution(cost, association, NestedSolution.SIMPLE, event,
-                                  self.accumulate, [first, second])
-        children = []
-        if first.composition_type == NestedSolution.MULTIPLE and second.composition_type == NestedSolution.MULTIPLE:
-            cost_bound = self.alpha + first.children[0].cost + second.children[0].cost
-            for first_child in first.children:
-                for second_child in second.children:
-                    if first_child.cost + second_child.cost > cost_bound:
-                        break
-                    children.append(self.cartesian(new_cost, first_child, second_child, association, event, num_losses))
-            children.sort(key=lambda sol: sol.cost)
-
-        elif first.composition_type == NestedSolution.MULTIPLE:
-            cost_bound = self.alpha + first.children[0].cost
-            for first_child in first.children:
-                if first_child.cost > cost_bound:
-                    break
-                children.append(self.cartesian(new_cost, first_child, second, association, event, num_losses))
+    def add_loss(self, loss_cost, solution):
+        if solution.composition_type == NestedSolution.MULTIPLE:
+            new_children = []
+            for child in solution.children:
+                new_children.append(NestedSolution(child.cost + loss_cost, child.association,
+                                                   child.composition_type, child.event, self.accumulate,
+                                                   child.children))
+            return NestedSolution(new_children[0].cost, None, NestedSolution.MULTIPLE,
+                                  None, self.accumulate, new_children)
         else:
-            cost_bound = self.alpha + second.children[0].cost
-            for second_child in second.children:
-                if second_child.cost > cost_bound:
-                    break
-                children.append(self.cartesian(new_cost, first, second_child, association, event, num_losses))
+            return NestedSolution(solution.cost + loss_cost, solution.association,
+                                  solution.composition_type, solution.event, self.accumulate,
+                                  solution.children)
 
-        return NestedSolution(children[0].cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children)
-
-    def best_solution(self, solutions):
-        """select the solutions with cost <= alpha + minimum cost"""
-        min_cost = min(sol.cost for sol in solutions)
-        if min_cost == float('Inf'):
-            return self.empty_solution()
-        cost_bound = min_cost + self.alpha
-
-        # catch the first solution for the merge
-        best = None
-        starting_index = 0
-        for i, solution in enumerate(solutions):
-            if solution.cost <= cost_bound:
-                best = solution
-                starting_index = i
-                break
-        for solution in solutions[starting_index+1:]:
-            if solution.cost > cost_bound:
-                continue  # using the fact that the cost of a MULTIPLE is the minimum cost of its children
-            best = self.bounded_merge(best, solution, cost_bound)
-        return best
-
-    def bounded_merge(self, first, second, cost_bound):
-        if first.composition_type != NestedSolution.MULTIPLE and second.composition_type != NestedSolution.MULTIPLE:
-            return NestedSolution(first.cost, None, NestedSolution.MULTIPLE, None, self.accumulate,
-                                  [first, second] if first.cost < second.cost else [second, first])
-
-        first_candidates, second_candidates = [first], [second]
-        if first.composition_type == NestedSolution.MULTIPLE:
-            first_candidates = first.children
-        if second.composition_type == NestedSolution.MULTIPLE:
-            second_candidates = second.children
-
-        assert tuple(sorted([u.cost for u in first_candidates])) == tuple([u.cost for u in first_candidates])
-        assert tuple(sorted([u.cost for u in second_candidates])) == tuple([u.cost for u in second_candidates])
-        assert all([u.composition_type != NestedSolution.MULTIPLE for u in first_candidates + second_candidates])
-
-        # merge two arrays of solutions with sorted costs
-        children = []
-        i, j = 0, 0
-        while i < len(first_candidates) and j < len(second_candidates):
-            first_child, second_child = first_candidates[i], second_candidates[j]
-            if first_child.cost > cost_bound and second_child.cost > cost_bound:
-                break
-            if first_child.cost < second_child.cost:
-                children.append(first_child)
-                i += 1
-            elif first_child.cost > second_child.cost:
-                children.append(second_child)
-                j += 1
-            else:
-                children.append(first_child)
-                children.append(second_child)
-                i += 1
-                j += 1
-        while i < len(first_candidates):
-            if first_candidates[i].cost > cost_bound:
-                break
-            children.append(first_candidates[i])
-            i += 1
-        while j < len(second_candidates):
-            if second_candidates[j].cost > cost_bound:
-                break
-            children.append(second_candidates[j])
-            j += 1
-
-        return NestedSolution(children[0].cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children)
 

@@ -43,7 +43,6 @@ def is_acyclic_stolzer(mapping, transfer_edges):
             if d in graph:
                 graph[node].add(d)
 
-
     for g, h in transfer_edges:
         for gp, hp in transfer_edges:
             if g == gp:  # condition 3
@@ -58,20 +57,5 @@ def is_acyclic_stolzer(mapping, transfer_edges):
                 graph[r.parent].add(dp)
                 graph[r.parent].add(rp)
 
-#    for g, h in transfer_edges:
-#        # gamma(g, h) = (sk, sj)
-#        sj = mapping[h]
-#        sk_ancestors = mapping[g].get_proper_ancestors()
-#        for si in sk_ancestors:
-#            if si in graph:
-#                graph[si].add(sj)
-#        # gamma(g, h) = (sj, sk)
-#        sj = mapping[g]
-#        sk_ancestors = mapping[h].get_proper_ancestors()
-#        for si in sk_ancestors:
-#            if si in graph:
-#                graph[si].add(sj)
-
     return not util.is_cyclic(graph)
-    # return True
 

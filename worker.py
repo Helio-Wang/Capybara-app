@@ -18,12 +18,13 @@ class WorkerData:
         self.host_tree = host_tree
         self.leaf_map = leaf_map
         self.multiplier = 1000
+        self.threshold = float('Inf')
 
     def count_solutions(self, cost_vector, task):
         recon = reconciliator.ReconciliatorCounter(self.host_tree, self.parasite_tree, self.leaf_map,
                                                    cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
                                                    cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
-                                                   float('Inf'), task)
+                                                   self.threshold, task)
         root = recon.run()
         opt_cost = root.cost / self.multiplier
 
@@ -33,15 +34,24 @@ class WorkerData:
         return opt_cost, root
 
     def enumerate_solutions_setup(self, cost_vector, task, maximum):
-        recon = reconciliator.ReconciliatorEnumerater(self.host_tree, self.parasite_tree, self.leaf_map,
+        recon = reconciliator.ReconciliatorEnumerator(self.host_tree, self.parasite_tree, self.leaf_map,
                                                       cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
                                                       cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
-                                                      float('Inf'), task, maximum)
+                                                      self.threshold, task, maximum)
         if task in (2, 3) and maximum == float('Inf'):
             recon.solution_generator = SolutionGenerator(False)
         root = recon.run()
         opt_cost = root.cost / self.multiplier
         return opt_cost, root
+
+    def enumerate_best_k(self, cost_vector, k):
+        recon = reconciliator.ReconciliatorBestKEnumerator(self.host_tree, self.parasite_tree, self.leaf_map,
+                                                           cost_vector[0] * self.multiplier,
+                                                           cost_vector[1] * self.multiplier,
+                                                           cost_vector[2] * self.multiplier,
+                                                           cost_vector[3] * self.multiplier, self.threshold, k)
+        root = recon.run()
+        return root.cost / self.multiplier, recon.maximum_cost / self.multiplier, root
 
 
 class CountThread(qt.QtCore.QThread):
@@ -110,7 +120,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         qt.QtCore.QThread.__init__(self, data=None, root=None, writer=None, maximum=None, acyclic=None)
         self.num_solutions, self.num_acyclic = 0, 0
         self.data, self.cost_vector, self.task, self.filename = None, None, None, None
-        self.vector, self.label_only = None, None
+        self.maximum, self.acyclic, self.vector, self.label_only = None, None, None, None
         self.writer = None
         self.progress_dlg = ProgressBarDialog()
         self.sig2.connect(self.progress_dlg.progress_changed)
@@ -348,6 +358,138 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 self.sig2.emit(int(percentage))
         self.sig2.emit(100)
         self.num_acyclic = num_class
+
+
+class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
+    sig = qt.QtCore.pyqtSignal(str)
+    sig2 = qt.QtCore.pyqtSignal(int)
+
+    def __init__(self):
+        qt.QtCore.QThread.__init__(self, data=None, root=None, writer=None, maximum=None, acyclic=None)
+        self.num_solutions, self.num_acyclic = 0, 0
+        self.data, self.cost_vector, self.filename = None, None, None
+        self.k, self.acyclic = None, None
+        self.writer = None
+        self.progress_dlg = ProgressBarDialog()
+        self.sig2.connect(self.progress_dlg.progress_changed)
+        self.progress_dlg.sig.connect(self.abort)
+        self.t0 = 0
+
+    def on_source(self, options):
+        self.data = options[0]
+        self.cost_vector = options[1:5]
+        self.filename = options[5]
+        self.k = options[6]
+        self.acyclic = options[7]
+        self.num_acyclic, self.num_solutions = 0, 0
+        self.writer = open(self.filename, 'w')
+
+    def write_header(self, opt_cost, max_cost):
+        self.writer.write('#--------------------\n')
+        self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
+        self.writer.write('#Parasite tree      = {}\n'.format(self.data.parasite_tree))
+        self.writer.write('#Host tree size     = {}\n'.format(self.data.host_tree.size()))
+        self.writer.write('#Parasite tree size = {}\n'.format(self.data.parasite_tree.size()))
+        self.writer.write('#Leaf mapping       = {{{}}}\n'.format(', '.join(map(lambda x: str(x[0]) + '=' + str(x[1]),
+                                                                                self.data.leaf_map.items()))))
+        self.writer.write('#--------------------\n')
+        if self.acyclic:
+            self.writer.write('Enumerate acyclic solutions among the best K solutions\n')
+        else:
+            self.writer.write('Enumerate the best K solutions\n')
+        self.writer.write('#Co-speciation cost = {}\n'.format(self.cost_vector[0]))
+        self.writer.write('#Duplication cost   = {}\n'.format(self.cost_vector[1]))
+        self.writer.write('#Host-switch cost   = {}\n'.format(self.cost_vector[2]))
+        self.writer.write('#Loss cost          = {}\n'.format(self.cost_vector[3]))
+        self.writer.write('#K                  = {}\n'.format(self.k))
+        self.writer.write('#Optimal cost       = {}\n'.format(opt_cost))
+        self.writer.write('#Maximum cost       = {}\n'.format(max_cost))
+        self.writer.write('#--------------------\n')
+
+    def run(self, label=''):
+        self.sig.emit('===============')
+        self.sig.emit(f'Job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.t0 = time.time()
+        self.sig.emit(f'Cost vector: {tuple(self.cost_vector)}')
+        self.sig.emit(f'K = {self.k}')
+        if self.acyclic:
+            self.sig.emit('Enumerate acyclic solutions among the best K solutions...')
+        else:
+            self.sig.emit('Enumerate the best K solutions...')
+        self.progress_dlg.show()
+        self.sig2.emit(1)
+        opt_cost, max_cost, root = self.data.enumerate_best_k(self.cost_vector, self.k)
+        try:
+            self.write_header(opt_cost, max_cost)
+            self.sig2.emit(5)
+            self.sig.emit('------')
+            self.root = root
+            self.loop_enumerate()
+            self.writer.write('#--------------------\n')
+            if self.acyclic:
+                self.sig.emit(f'Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}')
+                self.writer.write(f'#Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}\n')
+            else:
+                self.sig.emit(f'Number of output solutions = {self.num_acyclic}')
+                self.writer.write(f'#Number of output solutions = {self.num_acyclic}\n')
+        except ValueError:
+            return
+        self.sig.emit('Optimal cost = {}'.format(opt_cost))
+        self.sig.emit('Maximum cost = {}'.format(max_cost))
+        self.sig.emit('Output written to {}'.format(self.filename))
+        self.sig.emit('------')
+        self.sig.emit(f'Job finished at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
+        self.sig.emit('===============')
+        self.sig.emit('')
+        self.writer.close()
+
+    def abort(self, stop):
+        if stop:
+            self.sig.emit('------')
+            self.sig.emit(f'Job aborted at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+            self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
+            self.sig.emit('===============')
+            self.sig.emit('')
+            self.writer.close()
+            self.exit(1)
+            self.wait()
+
+    def loop_enumerate(self):
+        percentage = 5
+        while True:
+            self.current_mapping = {}
+            self.current_text = []
+            self.transfer_candidates = []
+
+            self.num_solutions += 1
+            current_cell = self.root
+            iterator = enumerator.SolutionIterator(self.root)
+            while not iterator.done():
+                current_cell = self.get_next(current_cell, iterator)
+            self.clean_stack()
+
+            is_acyclic = False
+            if self.acyclic:
+                transfer_edges = cyclicity.find_transfer_edges(self.data.host_tree,
+                                                               self.current_mapping, self.transfer_candidates)
+                if not transfer_edges:
+                    is_acyclic = True
+                else:
+                    is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
+
+            if not self.acyclic or is_acyclic:
+                self.num_acyclic += 1
+                self.writer.write(', '.join(self.current_text))
+                self.writer.write(f'\n[{self.num_acyclic}]\n')
+
+            if not self.merge_stack:
+                break
+            new_percentage = math.ceil(100 * self.num_acyclic / self.k)
+            if new_percentage > percentage:
+                percentage = new_percentage
+                self.sig2.emit(int(percentage))
+        self.sig2.emit(100)
 
 
 class ProgressBarDialog(qtw.QDialog):
