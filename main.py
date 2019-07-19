@@ -99,30 +99,38 @@ class EnumerateDialog(qtw.QDialog):
         layout.addWidget(groupBox)
 
         self.filter_cyclic = False
-        self.vector_output = False
+        self.vector_output = True
+        self.label_output = True
+        vlayout3 = qtw.QVBoxLayout()
         if self.task == 0:
             groupBox3 = qtw.QGroupBox('Filter out cyclic solutions ')
-            vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Keep only acyclic (slower)')
             bothButton = qtw.QRadioButton('Keep both cyclic and acyclic')
             bothButton.setChecked(True)
             onlyButton.toggled.connect(self.change_cyclic)
             vlayout3.addWidget(bothButton)
             vlayout3.addWidget(onlyButton)
-            groupBox3.setLayout(vlayout3)
-            layout.addWidget(groupBox3)
 
         elif self.task == 1:
             groupBox3 = qtw.QGroupBox('Event vector enumeration ')
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Reconciliation only')
-            onlyButton.setChecked(True)
             bothButton = qtw.QRadioButton('Output the event vector (as caption) with the reconciliation')
+            bothButton.setChecked(True)
             bothButton.toggled.connect(self.check_vector_output)
+            vlayout3.addWidget(bothButton)
+            vlayout3.addWidget(onlyButton)
+        else:
+            groupBox3 = qtw.QGroupBox('Event vector enumeration ')
+            vlayout3 = qtw.QVBoxLayout()
+            onlyButton = qtw.QRadioButton('Output the labels only')
+            onlyButton.setChecked(True)
+            bothButton = qtw.QRadioButton('Output one reconciliation (much slower)')
+            onlyButton.toggled.connect(self.check_label_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
-            groupBox3.setLayout(vlayout3)
-            layout.addWidget(groupBox3)
+        groupBox3.setLayout(vlayout3)
+        layout.addWidget(groupBox3)
 
         buttons = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel,
                                        qt.QtCore.Qt.Horizontal, self)
@@ -133,7 +141,7 @@ class EnumerateDialog(qtw.QDialog):
         layout.setSpacing(15)
         layout.setContentsMargins(30, 30, 5, 10)
         self.setLayout(layout)
-        self.resize(500, 300)
+        self.resize(500, 350)
 
     def change_limit(self, checked):
         if checked:
@@ -145,7 +153,10 @@ class EnumerateDialog(qtw.QDialog):
 
     def validate_limit(self):
         try:
-            _ = int(self.limitedText.text())
+            x = int(self.limitedText.text())
+            if x < 1:
+                qtw.QMessageBox.critical(None, 'Error', 'Limit must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+                self.limitedText.setText('1000')
         except ValueError:
             qtw.QMessageBox.critical(None, 'Error', 'Limit must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.limitedText.setText('1000')
@@ -155,6 +166,9 @@ class EnumerateDialog(qtw.QDialog):
 
     def check_vector_output(self, checked):
         self.vector_output = checked
+
+    def check_label_output(self, checked):
+        self.label_output = checked
 
 
 class CostVectorBox(qtw.QGroupBox):
@@ -404,8 +418,8 @@ class AppWindow(qtw.QWidget):
             max_nb = float('Inf')
         else:
             max_nb = int(dlg.limitedText.text())
-        self.sig2.emit([self.data] + self.costVectorBox.cost_vector + [task, filename, max_nb,
-                                                                       dlg.filter_cyclic, dlg.vector_output])
+        self.sig2.emit([self.data] + self.costVectorBox.cost_vector + [task, filename, max_nb,  dlg.filter_cyclic,
+                                                                       dlg.vector_output, dlg.label_output])
         self.enum_thread.start()
         self.in_thread()
 

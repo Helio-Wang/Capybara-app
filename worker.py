@@ -3,11 +3,13 @@ import math
 import time
 import PyQt5 as qt
 import PyQt5.QtWidgets as qtw
-from solution import NestedSolution
+from solution import NestedSolution, SolutionGenerator
 import reconciliator
 import cyclicity
 import enumerator
 import enumerate_classes as cla
+import poly_enum_class as enu
+import class_reconciliator
 
 
 class WorkerData:
@@ -35,7 +37,8 @@ class WorkerData:
                                                       cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
                                                       cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
                                                       float('Inf'), task, maximum)
-
+        if task in (2, 3) and maximum == float('Inf'):
+            recon.solution_generator = SolutionGenerator(False)
         root = recon.run()
         opt_cost = root.cost / self.multiplier
         return opt_cost, root
@@ -107,7 +110,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         qt.QtCore.QThread.__init__(self, data=None, root=None, writer=None, maximum=None, acyclic=None)
         self.num_solutions, self.num_acyclic = 0, 0
         self.data, self.cost_vector, self.task, self.filename = None, None, None, None
-        self.vector = None, None, None
+        self.vector, self.label_only = None, None
         self.writer = None
         self.progress_dlg = ProgressBarDialog()
         self.sig2.connect(self.progress_dlg.progress_changed)
@@ -122,6 +125,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.maximum = options[7]
         self.acyclic = options[8]
         self.vector = options[9]
+        self.label_only = options[10]
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
 
@@ -161,7 +165,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.writer.write('#Optimal cost       = {}\n'.format(opt_cost))
         self.writer.write('#--------------------\n')
 
-    def run(self):
+    def run(self, label=''):
         self.sig.emit('===============')
         self.sig.emit(f'Job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         self.t0 = time.time()
@@ -181,7 +185,14 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             elif self.task == 1:
                 self.loop_vector()
             else:
-                raise NotImplementedError
+                if self.maximum == float('Inf'):
+                    reachable = cla.fill_reachable_matrix(self.data.parasite_tree, self.data.host_tree, root)
+                    cla_root = cla.fill_class_matrix(self.data.parasite_tree, self.data.host_tree, self.data.leaf_map,
+                                                     reachable, self.task)
+                    self.sig2.emit(30)
+                    self.loop_classes(cla_root.num_subsolutions)
+                else:
+                    self.loop_classes()
             self.writer.write('#--------------------\n')
             if self.maximum == float('Inf'):
                 if self.task == 0 and self.acyclic:
@@ -237,7 +248,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                         return
 
     def loop_vector(self):
-        percentage = 0
+        percentage = 5
         num_class = 0
         for target_vector in self.root.event_vectors:
             self.current_text = []
@@ -259,14 +270,12 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.num_acyclic = num_class
 
     def loop_enumerate(self):
-        percentage = 0
+        percentage = 5
         while True:
-            # reinitialize information related to the current solution
             self.current_mapping = {}
             self.current_text = []
             self.transfer_candidates = []
 
-            # build the next solution
             self.num_solutions += 1
             current_cell = self.root
             iterator = enumerator.SolutionIterator(self.root)
@@ -274,7 +283,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 current_cell = self.get_next(current_cell, iterator)
             self.clean_stack()
 
-            # is the current solution acyclic?
             is_acyclic = False
             if self.acyclic:
                 transfer_edges = cyclicity.find_transfer_edges(self.data.host_tree,
@@ -284,7 +292,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 else:
                     is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
 
-            # write the solution only if it is acyclic, or if the user wants both
             if not self.acyclic or is_acyclic:
                 self.num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
@@ -303,6 +310,44 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 percentage = new_percentage
                 self.sig2.emit(int(percentage))
         self.sig2.emit(100)
+
+    def loop_classes(self, total_classes=0):
+        percentage = 30 if self.maximum == float('Inf') else 5
+        num_class = 0
+        class_enumerator = enu.ClassEnumerator(self.data.parasite_tree, self.root, self.task)
+        for mapping, events in class_enumerator.run():
+            num_class += 1
+            if self.label_only:
+                current_text = []
+                for p in self.data.parasite_tree:
+                    current_text.append(f'{str(p)}@{"?" if not mapping[p] else str(mapping[p])}|'
+                                        f'{"CDS L"[events[p]]}')
+                self.writer.write(', '.join(current_text))
+                self.writer.write(f'\n[{num_class}]\n')
+            else:
+                recon_bis = class_reconciliator.ReconValidator(self.data.host_tree, self.data.parasite_tree,
+                                                               self.data.leaf_map,
+                                                               self.cost_vector[0] * self.data.multiplier,
+                                                               self.cost_vector[1] * self.data.multiplier,
+                                                               self.cost_vector[2] * self.data.multiplier,
+                                                               self.cost_vector[3] * self.data.multiplier,
+                                                               float('Inf'), self.task,
+                                                               mapping, events)
+                root_bis = recon_bis.run()
+                recon_enumerator = enumerator.SolutionsEnumerator(self.data, root_bis, self.writer, 1, False)
+                recon_enumerator.run(label=str(num_class))
+
+            if num_class >= self.maximum:
+                break
+            if self.maximum == float('Inf'):
+                new_percentage = math.ceil(100 * num_class / total_classes)
+            else:
+                new_percentage = math.ceil(100 * num_class / self.maximum)
+            if new_percentage > percentage:
+                percentage = new_percentage
+                self.sig2.emit(int(percentage))
+        self.sig2.emit(100)
+        self.num_acyclic = num_class
 
 
 class ProgressBarDialog(qtw.QDialog):

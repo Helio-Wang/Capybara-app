@@ -55,7 +55,7 @@ class SolutionsEnumerator:
         self.current_text = []  # text for the printing the current solution
         self.transfer_candidates = []
 
-    def run(self):
+    def run(self, label=''):
         num_solutions = 0
         num_acyclic = 0
 
@@ -89,7 +89,7 @@ class SolutionsEnumerator:
             if not self.acyclic or is_acyclic:
                 num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
-                self.writer.write('\n')
+                self.writer.write(f'\n[{label}]\n')
 
             if not self.merge_stack:
                 break
