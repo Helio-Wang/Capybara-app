@@ -110,6 +110,8 @@ class CountThread(qt.QtCore.QThread):
         self.sig.emit(f'Time elapsed: {time.time() - t0:.2f} s')
         self.sig.emit('===============')
         self.sig.emit('')
+        self.exit(0)
+        self.wait()
 
 
 class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
@@ -224,6 +226,8 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit('===============')
         self.sig.emit('')
         self.writer.close()
+        self.exit(0)
+        self.wait()
 
     def abort(self, stop):
         if stop:
