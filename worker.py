@@ -140,7 +140,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.label_only = options[10]
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
-        print('started')
 
     def print_header(self):
         if self.task == 0:
@@ -179,15 +178,14 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.writer.write('#--------------------\n')
 
     def run(self, label=''):
-        print('running')
         self.sig.emit('===============')
         self.sig.emit(f'Job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         self.t0 = time.time()
         self.sig.emit(f'Cost vector: {tuple(self.cost_vector)}')
         self.print_header()
 
-        self.progress_dlg.show()
-        print('progress bar out')
+        self.progress_dlg.start()
+        qtw.QApplication.processEvents()
         self.sig2.emit(1)
         opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, self.maximum)
         try:
@@ -228,7 +226,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
         self.sig.emit('===============')
         self.sig.emit('')
-        print('done')
         self.writer.close()
         self.exit(0)
         self.wait()
@@ -424,7 +421,8 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.sig.emit('Enumerate acyclic solutions among the best K solutions...')
         else:
             self.sig.emit('Enumerate the best K solutions...')
-        self.progress_dlg.show()
+        self.progress_dlg.start()
+        qtw.QApplication.processEvents()
         self.sig2.emit(1)
         opt_cost, max_cost, root = self.data.enumerate_best_k(self.cost_vector, self.k)
         try:
@@ -502,7 +500,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig2.emit(100)
 
 
-class ProgressBarDialog(qtw.QDialog):
+class ProgressBarDialog(qtw.QWidget):
     sig = qt.QtCore.pyqtSignal(bool)
 
     def __init__(self):
@@ -518,14 +516,22 @@ class ProgressBarDialog(qtw.QDialog):
         vlayout.setContentsMargins(30, 30, 30, 30)
         self.setLayout(vlayout)
         self.resize(500, 150)
-        self.rejected.connect(self.canceled)
+        self.move(qtw.QApplication.desktop().screen().rect().center() - self.rect().center())
+        self.done = False
 
-    def canceled(self):
-        self.sig.emit(True)
+    def start(self):
+        self.done = False
+        self.show()
+
+    def closeEvent(self, event):
+        if not self.done:
+            self.sig.emit(True)
 
     def progress_changed(self, value):
         self.progress.setValue(value)
         if value == 100:
-            self.accept()
+            self.done = True
+            self.hide()
+            self.progress.reset()
 
 
