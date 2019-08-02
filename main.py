@@ -102,6 +102,7 @@ class EnumerateDialog(qtw.QDialog):
     def __init__(self, filename, task):
         super().__init__()
         self.task = task
+        self.wait = False
         self.setWindowTitle('Enumeration options')
         self.nameBox = qtw.QLineEdit()
         self.nameBox.setReadOnly(True)
@@ -192,9 +193,12 @@ class EnumerateDialog(qtw.QDialog):
             if x < 1:
                 qtw.QMessageBox.critical(None, 'Error', 'Limit must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
                 self.limitedText.setText('1000')
+                self.wait = True
         except ValueError:
             qtw.QMessageBox.critical(None, 'Error', 'Limit must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.limitedText.setText('1000')
+            self.wait = True
+        self.wait = False
 
     def change_cyclic(self, checked):
         self.filter_cyclic = checked
@@ -452,6 +456,8 @@ class MainAppWindow(qtw.QWidget):
             return
         dlg = EnumerateDialog(filename, task)
         if dlg.exec() == qtw.QDialog.Rejected:
+            return
+        if dlg.wait:
             return
         if not dlg.limitedText.text():
             max_nb = float('Inf')
