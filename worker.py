@@ -187,6 +187,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.print_header()
 
         self.progress_dlg.show()
+        print('progress bar out')
         self.sig2.emit(1)
         opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, self.maximum)
         try:
@@ -227,6 +228,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
         self.sig.emit('===============')
         self.sig.emit('')
+        print('done')
         self.writer.close()
         self.exit(0)
         self.wait()
