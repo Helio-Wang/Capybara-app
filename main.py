@@ -102,7 +102,6 @@ class EnumerateDialog(qtw.QDialog):
     def __init__(self, filename, task):
         super().__init__()
         self.task = task
-        self.wait = False
         self.setWindowTitle('Enumeration options')
         self.nameBox = qtw.QLineEdit()
         self.nameBox.setReadOnly(True)
@@ -115,7 +114,6 @@ class EnumerateDialog(qtw.QDialog):
         self.limitedText = qtw.QLineEdit()
         self.limitedText.setEnabled(False)
         limitedButton.toggled.connect(self.change_limit)
-        self.limitedText.editingFinished.connect(self.validate_limit)
         vlayout = qtw.QVBoxLayout()
         vlayout.addWidget(infiniteButton)
         hlayout = qtw.QHBoxLayout()
@@ -188,17 +186,19 @@ class EnumerateDialog(qtw.QDialog):
             self.limitedText.clear()
 
     def validate_limit(self):
+        if not self.limitedText.isEnabled():
+            return True
         try:
             x = int(self.limitedText.text())
             if x < 1:
                 qtw.QMessageBox.critical(None, 'Error', 'Limit must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
                 self.limitedText.setText('1000')
-                self.wait = True
+                return False
         except ValueError:
             qtw.QMessageBox.critical(None, 'Error', 'Limit must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.limitedText.setText('1000')
-            self.wait = True
-        self.wait = False
+            return False
+        return True
 
     def change_cyclic(self, checked):
         self.filter_cyclic = checked
@@ -250,8 +250,11 @@ class CostVectorBox(qtw.QGroupBox):
             self.cost_vector[index] = int(box.text())
         except ValueError:
             qtw.QMessageBox.critical(None, 'Error', 'Cost must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
-            box.setText('1')
-
+            if index == 0:
+                box.setText('-1')
+            else:   
+                box.setText('1')
+            
 
 class TaskBox(qtw.QGroupBox):
     def __init__(self):
@@ -454,11 +457,12 @@ class MainAppWindow(qtw.QWidget):
         success, filename = save_dialog('output.txt')
         if not success:
             return
-        dlg = EnumerateDialog(filename, task)
-        if dlg.exec() == qtw.QDialog.Rejected:
-            return
-        if dlg.wait:
-            return
+        while True:
+            dlg = EnumerateDialog(filename, task)
+            if dlg.exec() == qtw.QDialog.Rejected:
+                return
+            if dlg.validate_limit():
+                break
         if not dlg.limitedText.text():
             max_nb = float('Inf')
         else:
@@ -524,7 +528,6 @@ class SuboptWindow(MainAppWindow):
 
         self.groupBox = qtw.QGroupBox('Maximum number of output.')
         self.limitText = qtw.QLineEdit()
-        self.limitText.editingFinished.connect(self.validate_limit)
         self.limitText.setText('100')
         hlayout = qtw.QHBoxLayout()
         hlayout.addWidget(qtw.QLabel('K '))
@@ -577,9 +580,12 @@ class SuboptWindow(MainAppWindow):
             if x < 1:
                 qtw.QMessageBox.critical(None, 'Error', 'K must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
                 self.limitText.setText('100')
+                return False
         except ValueError:
             qtw.QMessageBox.critical(None, 'Error', 'K must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.limitText.setText('100')
+            return False
+        return True
 
     def change_cyclic(self, checked):
         self.acyclic_only = checked
@@ -590,6 +596,8 @@ class SuboptWindow(MainAppWindow):
         self.enum_thread.sig.connect(self.thread_output)
 
     def enumerate_event(self):
+        if not self.validate_limit():
+            return
         success, filename = save_dialog('output.txt')
         if not success:
             return
