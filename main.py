@@ -254,7 +254,7 @@ class MainAppWindow(qtw.QWidget):
     def __init__(self):
         super().__init__()
         self.setMinimumWidth(800)
-        self.setMinimumHeight(800)
+        self.setMinimumHeight(600)
 
         self.create_widget()
         self.set_layout()
@@ -466,7 +466,7 @@ class MainAppWindow(qtw.QWidget):
 
 
 class SuboptWindow(MainAppWindow):
-    sig = qt.QtCore.pyqtSignal(list)
+    sig3 = qt.QtCore.pyqtSignal(list)
 
     def __init__(self):
         super().__init__()
@@ -541,15 +541,15 @@ class SuboptWindow(MainAppWindow):
 
     def start_thread(self):
         self.enum_thread = worker.BestKEnumerateThread()
-        self.sig.connect(self.enum_thread.on_source)
+        self.sig3.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
 
     def enumerate_event(self):
         success, filename = save_dialog('output.txt')
         if not success:
             return
-        self.sig.emit([self.data] + self.costVectorBox.cost_vector
-                      + [filename, int(self.limitText.text()), self.acyclic_only])
+        self.sig3.emit([self.data] + self.costVectorBox.cost_vector
+                       + [filename, int(self.limitText.text()), self.acyclic_only])
         self.enum_thread.start()
         self.in_thread()
 
