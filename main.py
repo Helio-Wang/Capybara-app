@@ -273,23 +273,23 @@ class MainAppWindow(qtw.QWidget):
 
         self.btnCount = qtw.QPushButton('Count', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogOkButton))
         self.btnCount.setToolTip('<b>Count</b> the number of solutions')
-        self.btnCount.setFixedSize(105, 50)
+        self.btnCount.setFixedSize(110, 50)
         self.btnCount.clicked.connect(self.count_event)
 
         self.btnEnumerate = qtw.QPushButton(' Enumerate', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton))
         self.btnEnumerate.setToolTip('<b>Enumerate</b> all solutions')
-        self.btnEnumerate.setFixedSize(105, 50)
+        self.btnEnumerate.setFixedSize(110, 50)
         self.btnEnumerate.clicked.connect(self.enumerate_event)
 
         self.btnSave = qtw.QPushButton(' Save', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton))
         self.btnSave.setToolTip('<b>Save</b> the output to a file')
-        self.btnSave.setFixedSize(75, 50)
+        self.btnSave.setFixedSize(80, 50)
         self.btnSave.clicked.connect(self.save_event)
 
         self.inNameBox = qtw.QLineEdit()
         self.inNameBox.setReadOnly(True)
         self.summaryTextBox = qtw.QPlainTextEdit()
-        self.summaryTextBox.setFixedHeight(100)
+        self.summaryTextBox.setFixedHeight(60)
         self.summaryTextBox.setReadOnly(True)
         self.outTextBox = qtw.QTextEdit()
         self.outTextBox.setFont(qt.QtGui.QFontDatabase.systemFont(qt.QtGui.QFontDatabase.FixedFont))  # magic trick ;)

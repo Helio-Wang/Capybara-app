@@ -140,6 +140,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.label_only = options[10]
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
+        print('started')
 
     def print_header(self):
         if self.task == 0:
@@ -178,6 +179,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.writer.write('#--------------------\n')
 
     def run(self, label=''):
+        print('running')
         self.sig.emit('===============')
         self.sig.emit(f'Job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
         self.t0 = time.time()
@@ -447,6 +449,8 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit('===============')
         self.sig.emit('')
         self.writer.close()
+        self.exit(0)
+        self.wait()
 
     def abort(self, stop):
         if stop:
@@ -512,7 +516,10 @@ class ProgressBarDialog(qtw.QDialog):
         vlayout.setContentsMargins(30, 30, 30, 30)
         self.setLayout(vlayout)
         self.resize(500, 150)
-        self.rejected.connect(lambda: self.sig.emit(True))
+        self.rejected.connect(self.canceled)
+
+    def canceled(self):
+        self.sig.emit(True)
 
     def progress_changed(self, value):
         self.progress.setValue(value)
