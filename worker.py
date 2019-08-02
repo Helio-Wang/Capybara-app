@@ -124,9 +124,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.data, self.cost_vector, self.task, self.filename = None, None, None, None
         self.maximum, self.acyclic, self.vector, self.label_only = None, None, None, None
         self.writer = None
-        self.progress_dlg = ProgressBarDialog()
-        self.sig2.connect(self.progress_dlg.progress_changed)
-        self.progress_dlg.sig.connect(self.abort)
         self.t0 = 0
 
     def on_source(self, options):
@@ -184,8 +181,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit(f'Cost vector: {tuple(self.cost_vector)}')
         self.print_header()
 
-        self.progress_dlg.start()
-        qtw.QApplication.processEvents()
         self.sig2.emit(1)
         opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, self.maximum)
         try:
@@ -228,18 +223,15 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit('')
         self.writer.close()
         self.exit(0)
-        self.wait()
 
-    def abort(self, stop):
-        if stop:
-            self.sig.emit('------')
-            self.sig.emit(f'Job aborted at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-            self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
-            self.sig.emit('===============')
-            self.sig.emit('')
-            self.writer.close()
-            self.exit(1)
-            self.wait()
+    def abort(self):
+        self.sig.emit('------')
+        self.sig.emit(f'Job aborted at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
+        self.sig.emit('===============')
+        self.sig.emit('')
+        self.writer.close()
+        self.exit(1)
 
     def visit_vector(self, solution, target_vector):
         if solution.composition_type == NestedSolution.MULTIPLE:
@@ -375,9 +367,6 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.data, self.cost_vector, self.filename = None, None, None
         self.k, self.acyclic = None, None
         self.writer = None
-        self.progress_dlg = ProgressBarDialog()
-        self.sig2.connect(self.progress_dlg.progress_changed)
-        self.progress_dlg.sig.connect(self.abort)
         self.t0 = 0
 
     def on_source(self, options):
@@ -421,8 +410,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.sig.emit('Enumerate acyclic solutions among the best K solutions...')
         else:
             self.sig.emit('Enumerate the best K solutions...')
-        self.progress_dlg.start()
-        qtw.QApplication.processEvents()
+
         self.sig2.emit(1)
         opt_cost, max_cost, root = self.data.enumerate_best_k(self.cost_vector, self.k)
         try:
@@ -450,18 +438,15 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit('')
         self.writer.close()
         self.exit(0)
-        self.wait()
 
-    def abort(self, stop):
-        if stop:
-            self.sig.emit('------')
-            self.sig.emit(f'Job aborted at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
-            self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
-            self.sig.emit('===============')
-            self.sig.emit('')
-            self.writer.close()
-            self.exit(1)
-            self.wait()
+    def abort(self):
+        self.sig.emit('------')
+        self.sig.emit(f'Job aborted at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.sig.emit(f'Time elapsed: {time.time() - self.t0:.2f} s')
+        self.sig.emit('===============')
+        self.sig.emit('')
+        self.writer.close()
+        self.exit(1)
 
     def loop_enumerate(self):
         percentage = 5
@@ -498,40 +483,5 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 percentage = new_percentage
                 self.sig2.emit(int(percentage))
         self.sig2.emit(100)
-
-
-class ProgressBarDialog(qtw.QWidget):
-    sig = qt.QtCore.pyqtSignal(bool)
-
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle('Writing the output file')
-        self.progress = qtw.QProgressBar(self)
-        self.progress.setGeometry(0, 0, 300, 25)
-        self.progress.setMaximum(100)
-        vlayout = qtw.QVBoxLayout()
-        vlayout.addWidget(qtw.QLabel('Please wait...'))
-        vlayout.addWidget(self.progress)
-        vlayout.setSpacing(0)
-        vlayout.setContentsMargins(30, 30, 30, 30)
-        self.setLayout(vlayout)
-        self.resize(500, 150)
-        self.move(qtw.QApplication.desktop().screen().rect().center() - self.rect().center())
-        self.done = False
-
-    def start(self):
-        self.done = False
-        self.show()
-
-    def closeEvent(self, event):
-        if not self.done:
-            self.sig.emit(True)
-
-    def progress_changed(self, value):
-        self.progress.setValue(value)
-        if value == 100:
-            self.done = True
-            self.hide()
-            self.progress.reset()
 
 

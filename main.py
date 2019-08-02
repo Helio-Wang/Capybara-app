@@ -63,6 +63,41 @@ def save_dialog(default_name):
     return True, filename
 
 
+class OutputProgressDialog(qtw.QProgressDialog):
+    def __init__(self, message='Output in progress', title='Writing the output...', parent=None):
+        super().__init__(message, 'OK', 0, 100, parent)
+        self.setMinimumDuration(0)
+
+        self.cancelButton = qtw.QPushButton('Cancel')
+        self.setCancelButton(self.cancelButton)
+        self.canceled.connect(self.cancel)
+
+        self.setAutoReset(False)
+        self.setAutoClose(False)
+
+        self.setWindowTitle(title)
+        self.setFixedSize(500, 150)
+        self.thread = None
+
+        self.open()
+        self.setValue(0)
+        qtw.QApplication.processEvents()
+
+    def valueChanged(self, value):
+        self.setValue(value)
+        if value == 100:
+            self.setCancelButtonText('OK')
+            self.close()
+
+    def connectToThread(self, thread):
+        self.thread = thread
+        thread.sig2.connect(self.valueChanged)
+
+    def cancel(self):
+        if self.cancelButton.text() == 'Cancel':
+            self.thread.abort()
+
+
 class EnumerateDialog(qtw.QDialog):
     def __init__(self, filename, task):
         super().__init__()
@@ -422,10 +457,14 @@ class MainAppWindow(qtw.QWidget):
             max_nb = float('Inf')
         else:
             max_nb = int(dlg.limitedText.text())
+
+        progress_dlg = OutputProgressDialog()
+        progress_dlg.connectToThread(self.enum_thread)
         self.sig2.emit([self.data] + self.costVectorBox.cost_vector + [task, filename, max_nb,  dlg.filter_cyclic,
                                                                        dlg.vector_output, dlg.label_output])
         self.enum_thread.start()
         self.in_thread()
+        progress_dlg.exec_()
 
     def save_event(self):
         success, filename = save_dialog('log.txt')
@@ -548,10 +587,13 @@ class SuboptWindow(MainAppWindow):
         success, filename = save_dialog('output.txt')
         if not success:
             return
+        progress_dlg = OutputProgressDialog()
+        progress_dlg.connectToThread(self.enum_thread)
         self.sig3.emit([self.data] + self.costVectorBox.cost_vector
                        + [filename, int(self.limitText.text()), self.acyclic_only])
         self.enum_thread.start()
         self.in_thread()
+        progress_dlg.exec_()
 
 
 class WelcomeWindow(qtw.QDialog):
