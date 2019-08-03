@@ -643,8 +643,10 @@ if __name__ == '__main__':
     welcome.exec()
     if welcome.choice == 1:
         widget = MainAppWindow()
-    else:
+    elif welcome.choice == 2:
         widget = SuboptWindow()
+    else:
+        sys.exit(0)
     widget.show()
     widget.move(qtw.QApplication.desktop().screen().rect().center() - widget.rect().center())
     app.exec_()
