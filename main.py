@@ -482,6 +482,7 @@ class MainAppWindow(qtw.QWidget):
             return
         with open(filename, 'w') as f:
             f.write(self.outTextBox.toPlainText())
+        qtw.QMessageBox.information(None, 'Success', 'The output has been saved successfully!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
         self.unsaved = False
 
     def in_thread(self):
