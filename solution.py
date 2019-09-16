@@ -101,6 +101,9 @@ class SolutionGenerator:
 
 
 class SolutionGeneratorCounter(SolutionGenerator):
+    """
+    Faster counting, without flattening, cannot be used as base for enumeration
+    """
     def __init__(self):
         super().__init__(True)
 

@@ -2,17 +2,18 @@ import datetime
 import math
 import time
 import PyQt5 as qt
-import PyQt5.QtWidgets as qtw
-from solution import NestedSolution, SolutionGenerator
+from solution import NestedSolution
 import reconciliator
 import cyclicity
 import enumerator
 import enumerate_classes as cla
-import poly_enum_class as enu
-import class_reconciliator
+from algo import event_reconciliator, poly_enum_class as cenu
 
 
 class WorkerData:
+    """
+    Interface between the input data and the reconciliators
+    """
     def __init__(self, parasite_tree, host_tree, leaf_map):
         self.parasite_tree = parasite_tree
         self.host_tree = host_tree
@@ -38,8 +39,6 @@ class WorkerData:
                                                       cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
                                                       cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
                                                       self.threshold, task, maximum)
-        if task in (2, 3) and maximum == float('Inf'):
-            recon.solution_generator = SolutionGenerator(False)
         root = recon.run()
         opt_cost = root.cost / self.multiplier
         return opt_cost, root
@@ -55,10 +54,13 @@ class WorkerData:
 
 
 class CountThread(qt.QtCore.QThread):
+    """
+    Thread starts with the Count button event, sends the number of solutions to the interface
+    """
     sig = qt.QtCore.pyqtSignal(str)
 
     def __init__(self):
-        qt.QtCore.QThread.__init__(self)
+        super().__init__()
         self.data, self.cost_vector, self.tasks = None, None, None
 
     def on_source(self, options):
@@ -111,15 +113,17 @@ class CountThread(qt.QtCore.QThread):
         self.sig.emit('===============')
         self.sig.emit('')
         self.exit(0)
-        self.wait()
 
 
 class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
+    """
+    Thread starts with the Enumerate button event, writes solutions to a file, updates the progress bar
+    """
     sig = qt.QtCore.pyqtSignal(str)
     sig2 = qt.QtCore.pyqtSignal(int)
 
     def __init__(self):
-        qt.QtCore.QThread.__init__(self, data=None, root=None, writer=None, maximum=None, acyclic=None)
+        super().__init__(data=None, root=None, writer=None, maximum=None, acyclic=None)
         self.num_solutions, self.num_acyclic = 0, 0
         self.data, self.cost_vector, self.task, self.filename = None, None, None, None
         self.maximum, self.acyclic, self.vector, self.label_only = None, None, None, None
@@ -132,7 +136,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.task = options[5]
         self.filename = options[6]
         self.maximum = options[7]
-        self.acyclic = options[8]
+        self.acyclic_only = options[8]
         self.vector = options[9]
         self.label_only = options[10]
         self.num_acyclic, self.num_solutions = 0, 0
@@ -140,8 +144,8 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
 
     def print_header(self):
         if self.task == 0:
-            self.sig.emit(f'Task {self.task+1}: Enumerate {"acyclic " if self.acyclic else ""}solutions'
-                          f'{" (cyclic or acyclic)" if not self.acyclic else ""}...')
+            self.sig.emit(f'Task {self.task+1}: Enumerate {"acyclic " if self.acyclic_only else ""}solutions'
+                          f'{" (cyclic or acyclic)" if not self.acyclic_only else ""}...')
         elif self.task == 1:
             self.sig.emit(f'Task {self.task+1}: Enumerate one solution per event vector...')
         elif self.task == 2:
@@ -159,8 +163,8 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                                                                                 self.data.leaf_map.items()))))
         self.writer.write('#--------------------\n')
         if self.task == 0:
-            self.writer.write(f'#Task {self.task+1}: Enumerate {"acyclic " if self.acyclic else ""}solutions '
-                              f'{"(cyclic or acyclic)" if not self.acyclic else ""}\n')
+            self.writer.write(f'#Task {self.task+1}: Enumerate {"acyclic " if self.acyclic_only else ""}solutions '
+                              f'{"(cyclic or acyclic)" if not self.acyclic_only else ""}\n')
         elif self.task == 1:
             self.writer.write(f'#Task {self.task+1}: Enumerate one solution per event vector\n')
         elif self.task == 2:
@@ -203,7 +207,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                     self.loop_classes()
             self.writer.write('#--------------------\n')
             if self.maximum == float('Inf'):
-                if self.task == 0 and self.acyclic:
+                if self.task == 0 and self.acyclic_only:
                     self.sig.emit(f'Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}')
                     self.writer.write(f'#Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}\n')
                 else:
@@ -212,7 +216,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             else:
                 self.sig.emit(f'Number of output solutions = {self.num_acyclic} (maximum {self.maximum})')
                 self.writer.write(f'#Number of output solutions = {self.num_acyclic} (maximum {self.maximum})\n')
-        except ValueError:
+        except ValueError:  # aborted
             return
         self.sig.emit('Optimal cost = {}'.format(opt_cost))
         self.sig.emit('Output written to {}'.format(self.filename))
@@ -234,6 +238,9 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.exit(1)
 
     def visit_vector(self, solution, target_vector):
+        """
+        Recursive function in Event Vector Enumeration loop for extracting one solution
+        """
         if solution.composition_type == NestedSolution.MULTIPLE:
             for child in solution.children:
                 if target_vector in child.event_vectors:
@@ -266,6 +273,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.visit_vector(self.root, target_vector)
             self.writer.write(', '.join(self.current_text))
             self.writer.write(f'\n[{num_class if not self.vector else str(target_vector.vector)}]\n')
+
             if self.maximum == float('Inf'):
                 new_percentage = math.ceil(100 * num_class / len(self.root.event_vectors))
             else:
@@ -291,7 +299,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.clean_stack()
 
             is_acyclic = False
-            if self.acyclic:
+            if self.acyclic_only:
                 transfer_edges = cyclicity.find_transfer_edges(self.data.host_tree,
                                                                self.current_mapping, self.transfer_candidates)
                 if not transfer_edges:
@@ -299,7 +307,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 else:
                     is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
 
-            if not self.acyclic or is_acyclic:
+            if not self.acyclic_only or is_acyclic:
                 self.num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
                 self.writer.write(f'\n[{self.num_acyclic}]\n')
@@ -321,7 +329,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
     def loop_classes(self, total_classes=0):
         percentage = 30 if self.maximum == float('Inf') else 5
         num_class = 0
-        class_enumerator = enu.ClassEnumerator(self.data.parasite_tree, self.root, self.task)
+        class_enumerator = cenu.ClassEnumerator(self.data.parasite_tree, self.root, self.task)
         for mapping, events in class_enumerator.run():
             num_class += 1
             if self.label_only:
@@ -332,14 +340,14 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 self.writer.write(', '.join(current_text))
                 self.writer.write(f'\n[{num_class}]\n')
             else:
-                recon_bis = class_reconciliator.ReconValidator(self.data.host_tree, self.data.parasite_tree,
-                                                               self.data.leaf_map,
-                                                               self.cost_vector[0] * self.data.multiplier,
-                                                               self.cost_vector[1] * self.data.multiplier,
-                                                               self.cost_vector[2] * self.data.multiplier,
-                                                               self.cost_vector[3] * self.data.multiplier,
-                                                               float('Inf'), self.task,
-                                                               mapping, events)
+                recon_bis = event_reconciliator.EventReconciliator(self.data.host_tree, self.data.parasite_tree,
+                                                                   self.data.leaf_map,
+                                                                   self.cost_vector[0] * self.data.multiplier,
+                                                                   self.cost_vector[1] * self.data.multiplier,
+                                                                   self.cost_vector[2] * self.data.multiplier,
+                                                                   self.cost_vector[3] * self.data.multiplier,
+                                                                   float('Inf'), self.task,
+                                                                   mapping, events)
                 root_bis = recon_bis.run()
                 recon_enumerator = enumerator.SolutionsEnumerator(self.data, root_bis, self.writer, 1, False)
                 recon_enumerator.run(label=str(num_class))
@@ -358,6 +366,9 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
 
 
 class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
+    """
+    Enumeration thread for the best-K enumeration
+    """
     sig = qt.QtCore.pyqtSignal(str)
     sig2 = qt.QtCore.pyqtSignal(int)
 
@@ -365,7 +376,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         qt.QtCore.QThread.__init__(self, data=None, root=None, writer=None, maximum=None, acyclic=None)
         self.num_solutions, self.num_acyclic = 0, 0
         self.data, self.cost_vector, self.filename = None, None, None
-        self.k, self.acyclic = None, None
+        self.k, self.acyclic_only = None, None
         self.writer = None
         self.t0 = 0
 
@@ -374,7 +385,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.cost_vector = options[1:5]
         self.filename = options[5]
         self.k = options[6]
-        self.acyclic = options[7]
+        self.acyclic_only = options[7]
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
 
@@ -387,7 +398,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.writer.write('#Leaf mapping       = {{{}}}\n'.format(', '.join(map(lambda x: str(x[0]) + '=' + str(x[1]),
                                                                                 self.data.leaf_map.items()))))
         self.writer.write('#--------------------\n')
-        if self.acyclic:
+        if self.acyclic_only:
             self.writer.write('Enumerate acyclic solutions among the best K solutions\n')
         else:
             self.writer.write('Enumerate the best K solutions\n')
@@ -406,7 +417,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.t0 = time.time()
         self.sig.emit(f'Cost vector: {tuple(self.cost_vector)}')
         self.sig.emit(f'K = {self.k}')
-        if self.acyclic:
+        if self.acyclic_only:
             self.sig.emit('Enumerate acyclic solutions among the best K solutions...')
         else:
             self.sig.emit('Enumerate the best K solutions...')
@@ -420,7 +431,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.root = root
             self.loop_enumerate()
             self.writer.write('#--------------------\n')
-            if self.acyclic:
+            if self.acyclic_only:
                 self.sig.emit(f'Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}')
                 self.writer.write(f'#Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}\n')
             else:
@@ -463,7 +474,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.clean_stack()
 
             is_acyclic = False
-            if self.acyclic:
+            if self.acyclic_only:
                 transfer_edges = cyclicity.find_transfer_edges(self.data.host_tree,
                                                                self.current_mapping, self.transfer_candidates)
                 if not transfer_edges:
@@ -471,7 +482,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 else:
                     is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
 
-            if not self.acyclic or is_acyclic:
+            if not self.acyclic_only or is_acyclic:
                 self.num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
                 self.writer.write(f'\n[{self.num_acyclic}]\n')
@@ -483,5 +494,4 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 percentage = new_percentage
                 self.sig2.emit(int(percentage))
         self.sig2.emit(100)
-
 

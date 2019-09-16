@@ -4,11 +4,8 @@ from solution import Association, NestedSolution
 
 
 class NestedClass(NestedSolution):
-    NON_SWITCH_EVENT = -1
     GENERAL_NODE = TreeNode('GENERAL')
     SWITCH_NODE = TreeNode('SWITCH')
-    LEFT_SWITCH_NODE = TreeNode('LSWITCH')
-    RIGHT_SWITCH_NODE = TreeNode('RSWITCH')
 
     def __init__(self, association, composition_type, event, children):
         super().__init__(0, association, composition_type, event, True, children)

@@ -7,6 +7,9 @@ import worker
 
 
 def test_open(filename):
+    """
+    Permission testing for open file dialog
+    """
     try:
         with open(filename, 'r'):
             pass
@@ -19,8 +22,8 @@ def test_open(filename):
 
 
 def handle_overwrite(filename):
-    """!
-    @brief Handle manually the overwrite option when saving output file
+    """
+    Handle manually the overwrite option when saving output file
     """
     if os.path.exists(filename):
         msg = qtw.QMessageBox.warning(None, 'Confirm overwrite',
@@ -44,6 +47,9 @@ def handle_overwrite(filename):
 
 
 def open_dialog():
+    """
+    Dialog for opening nexus files
+    """
     filename, _ = qtw.QFileDialog.getOpenFileName(None, 'Open a Nexus file', '', 'Nexus Files (*.nex)',
                                                   options=qtw.QFileDialog.Options()
                                                         | qtw.QFileDialog.DontUseNativeDialog)
@@ -53,6 +59,9 @@ def open_dialog():
 
 
 def save_dialog(default_name):
+    """
+    Custom dialog for saving text files
+    """
     filename, _ = qtw.QFileDialog.getSaveFileName(None, 'Save the output file', default_name,
                                                   'Text Files (*.txt) ;; All Files (*)',
                                                   options=qtw.QFileDialog.Options()
@@ -64,6 +73,9 @@ def save_dialog(default_name):
 
 
 class OutputProgressDialog(qtw.QProgressDialog):
+    """
+    A progress bar for the enumeration tasks
+    """
     def __init__(self, message='Output in progress', title='Writing the output...', parent=None):
         super().__init__(message, 'OK', 0, 100, parent)
         self.setMinimumDuration(0)
@@ -96,9 +108,14 @@ class OutputProgressDialog(qtw.QProgressDialog):
     def cancel(self):
         if self.cancelButton.text() == 'Cancel':
             self.thread.abort()
+            self.thread.wait()
 
 
 class EnumerateDialog(qtw.QDialog):
+    """
+    After choosing the output file names, the user is provided with further enumeration options
+    in particular, whether to filter out cyclic solutions
+    """
     def __init__(self, filename, task):
         super().__init__()
         self.task = task
@@ -154,6 +171,7 @@ class EnumerateDialog(qtw.QDialog):
             bothButton.toggled.connect(self.check_vector_output)
             vlayout3.addWidget(bothButton)
             vlayout3.addWidget(onlyButton)
+
         else:
             groupBox3 = qtw.QGroupBox('Event vector enumeration ')
             vlayout3 = qtw.QVBoxLayout()
@@ -163,6 +181,7 @@ class EnumerateDialog(qtw.QDialog):
             onlyButton.toggled.connect(self.check_label_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
+
         groupBox3.setLayout(vlayout3)
         layout.addWidget(groupBox3)
 
@@ -191,11 +210,11 @@ class EnumerateDialog(qtw.QDialog):
         try:
             x = int(self.limitedText.text())
             if x < 1:
-                qtw.QMessageBox.critical(None, 'Error', 'Limit must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+                qtw.QMessageBox.critical(self, 'Error', 'Limit must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
                 self.limitedText.setText('1000')
                 return False
         except ValueError:
-            qtw.QMessageBox.critical(None, 'Error', 'Limit must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(self, 'Error', 'Limit must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.limitedText.setText('1000')
             return False
         return True
@@ -249,7 +268,7 @@ class CostVectorBox(qtw.QGroupBox):
         try:
             self.cost_vector[index] = int(box.text())
         except ValueError:
-            qtw.QMessageBox.critical(None, 'Error', 'Cost must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(self, 'Error', 'Cost must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             if index == 0:
                 box.setText('-1')
             else:   
@@ -307,6 +326,15 @@ class MainAppWindow(qtw.QWidget):
         self.has_output = False
         self.unsaved = False
 
+    def start_thread(self):
+        self.count_thread = worker.CountThread()
+        self.sig.connect(self.count_thread.on_source)
+        self.count_thread.sig.connect(self.thread_output)
+
+        self.enum_thread = worker.EnumerateThread()
+        self.sig2.connect(self.enum_thread.on_source)
+        self.enum_thread.sig.connect(self.thread_output)
+
     def create_widget(self):
         self.btnOpen = qtw.QPushButton('Open', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton))
         self.btnOpen.setToolTip('<b>Open</b> a Nexus file')
@@ -340,15 +368,6 @@ class MainAppWindow(qtw.QWidget):
 
         self.costVectorBox = CostVectorBox()
         self.taskBox = TaskBox()
-
-    def start_thread(self):
-        self.count_thread = worker.CountThread()
-        self.sig.connect(self.count_thread.on_source)
-        self.count_thread.sig.connect(self.thread_output)
-
-        self.enum_thread = worker.EnumerateThread()
-        self.sig2.connect(self.enum_thread.on_source)
-        self.enum_thread.sig.connect(self.thread_output)
 
     def set_layout(self):
         main_layout = qtw.QVBoxLayout()
@@ -392,7 +411,7 @@ class MainAppWindow(qtw.QWidget):
 
     def open_event(self):
         if self.has_output and self.unsaved:
-            msg = qtw.QMessageBox.warning(None, 'Confirm new input',
+            msg = qtw.QMessageBox.warning(self, 'Confirm new input',
                                           'The current output will be lost if unsaved.\n'
                                           'Do you want to continue?',
                                           qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel, qtw.QMessageBox.Ok)
@@ -418,10 +437,10 @@ class MainAppWindow(qtw.QWidget):
                 parasite_tree = parser.parasite_tree
                 leaf_map = parser.leaf_map
         except nexparser.NexusFileParserException as e:
-            qtw.QMessageBox.critical(None, 'Nexus Error', e.message, qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(self, 'Nexus Error', e.message, qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             return False
         except NotImplementedError:
-            qtw.QMessageBox.critical(None, 'Format Error', 'The file format is not supported.',
+            qtw.QMessageBox.critical(self, 'Format Error', 'The file format is not supported.',
                                      qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             return False
         self.data = worker.WorkerData(parasite_tree, host_tree, leaf_map)
@@ -437,7 +456,7 @@ class MainAppWindow(qtw.QWidget):
 
     def count_event(self):
         if not self.taskBox.tasks:
-            qtw.QMessageBox.critical(None, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(self, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.taskBox.last_check.setChecked(True)
             return
         self.sig.emit([self.data] + self.costVectorBox.cost_vector + sorted(list(self.taskBox.tasks)))
@@ -446,11 +465,11 @@ class MainAppWindow(qtw.QWidget):
 
     def enumerate_event(self):
         if not self.taskBox.tasks:
-            qtw.QMessageBox.critical(None, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(self, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.taskBox.last_check.setChecked(True)
             return
         if len(self.taskBox.tasks) > 1:
-            qtw.QMessageBox.critical(None, 'Error', 'Choose one task at a time for enumeration.',
+            qtw.QMessageBox.critical(self, 'Error', 'Choose one task at a time for enumeration.',
                                      qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             return
         task = list(self.taskBox.tasks).pop()
@@ -482,7 +501,8 @@ class MainAppWindow(qtw.QWidget):
             return
         with open(filename, 'w') as f:
             f.write(self.outTextBox.toPlainText())
-        qtw.QMessageBox.information(None, 'Success', 'The output has been saved successfully!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+        qtw.QMessageBox.information(self, 'Success', 'The output has been saved successfully!',
+                                    qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
         self.unsaved = False
 
     def in_thread(self):
@@ -504,7 +524,7 @@ class MainAppWindow(qtw.QWidget):
         self.unsaved = True
 
     def closeEvent(self, event):
-        msg = qtw.QMessageBox.warning(None, 'Confirm exit', 'Are you sure you want to exit the program?'
+        msg = qtw.QMessageBox.warning(self, 'Confirm exit', 'Are you sure you want to exit the program?'
                                       + ('\n(The current output will be lost if unsaved)'
                                          if self.has_output and self.unsaved else ''),
                                       qtw.QMessageBox.Yes | qtw.QMessageBox.Cancel, qtw.QMessageBox.Yes)
@@ -521,6 +541,11 @@ class SuboptWindow(MainAppWindow):
     def __init__(self):
         super().__init__()
         self.acyclic_only = False
+
+    def start_thread(self):
+        self.enum_thread = worker.BestKEnumerateThread()
+        self.sig3.connect(self.enum_thread.on_source)
+        self.enum_thread.sig.connect(self.thread_output)
 
     def create_widget(self):
         super().create_widget()
@@ -576,25 +601,23 @@ class SuboptWindow(MainAppWindow):
         self.setLayout(main_layout)
 
     def validate_limit(self):
+        """
+        Return true if the input value for K is valid
+        """
         try:
             x = int(self.limitText.text())
             if x < 1:
-                qtw.QMessageBox.critical(None, 'Error', 'K must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+                qtw.QMessageBox.critical(self, 'Error', 'K must be at least one!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
                 self.limitText.setText('100')
                 return False
         except ValueError:
-            qtw.QMessageBox.critical(None, 'Error', 'K must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+            qtw.QMessageBox.critical(self, 'Error', 'K must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.limitText.setText('100')
             return False
         return True
 
     def change_cyclic(self, checked):
         self.acyclic_only = checked
-
-    def start_thread(self):
-        self.enum_thread = worker.BestKEnumerateThread()
-        self.sig3.connect(self.enum_thread.on_source)
-        self.enum_thread.sig.connect(self.thread_output)
 
     def enumerate_event(self):
         if not self.validate_limit():

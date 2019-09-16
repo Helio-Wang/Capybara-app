@@ -1,9 +1,12 @@
 from util import flatten, get_associations
 from solution import Association, NestedSolution
-from equivalence_class import NestedClass
+from algo.equivalence_class import NestedClass
 
 
 def fill_reachable_matrix(parasite_tree, host_tree, optimal_solutions):
+    """
+    Index all solutions for future access
+    """
     reachable = [[set() for _ in range(host_tree.size())] for _ in range(parasite_tree.size())]
 
     for root in flatten(optimal_solutions):
@@ -30,6 +33,9 @@ def fill_reachable_matrix(parasite_tree, host_tree, optimal_solutions):
 
 
 def fill_class_matrix(parasite_tree, host_tree, leaf_map, reachable_matrix, task):
+    """
+    Build the class enumeration graph by merging
+    """
     class_matrix = [[NestedClass.empty_class() for _ in range(host_tree.size())] for _ in range(parasite_tree.size())]
     for p in parasite_tree:
         if p.is_leaf():
@@ -39,7 +45,6 @@ def fill_class_matrix(parasite_tree, host_tree, leaf_map, reachable_matrix, task
             p1, p2 = p.left_child, p.right_child
 
             for h in host_tree:
-
                 for node in reachable_matrix[p.index][h.index]:
 
                     left_sum = NestedClass.empty_class()
@@ -65,6 +70,9 @@ def fill_class_matrix(parasite_tree, host_tree, leaf_map, reachable_matrix, task
 
 
 def get_sub_solution_strong(left_sum, right_sum, node, parasite):
+    """
+    Add the signature to a new class according the strong equivalence relation
+    """
     if node.event == NestedSolution.HOST_SWITCH:
         return NestedClass.cartesian(left_sum, right_sum,
                                      Association(parasite, NestedClass.SWITCH_NODE), node.event)
@@ -72,26 +80,10 @@ def get_sub_solution_strong(left_sum, right_sum, node, parasite):
                                  Association(parasite, node.association.host), node.event)
 
 
-def get_sub_solution_weak(left_sum, right_sum, node, parasite):
-    if node.event == NestedSolution.HOST_SWITCH:
-        return NestedClass.cartesian(left_sum, right_sum,
-                                     Association(parasite, NestedClass.SWITCH_NODE), node.event)
-    return NestedClass.cartesian(left_sum, right_sum,
-                                 Association(parasite, node.association.host), NestedClass.NON_SWITCH_EVENT)
-
-
 def get_sub_solution_event_partition(left_sum, right_sum, node, parasite):
+    """
+    Add the signature to a new class according the event partition equivalence relation
+    """
     return NestedClass.cartesian(left_sum, right_sum,
                                  Association(parasite, NestedClass.GENERAL_NODE), node.event)
-
-
-def get_sub_solution_event_labeling(left_sum, right_sum, node, parasite):
-    if node.event == NestedSolution.HOST_SWITCH:
-        h, h1 = node.association.host, list(get_associations(node.children[0]))[0].host
-        if h.is_ancestor_of(h1):
-            association = Association(parasite, NestedClass.RIGHT_SWITCH_NODE)
-        else:
-            association = Association(parasite, NestedClass.LEFT_SWITCH_NODE)
-        return NestedClass.cartesian(left_sum, right_sum, association, node.event)
-    return NestedClass.cartesian(left_sum, right_sum, Association(parasite, NestedClass.GENERAL_NODE), node.event)
 

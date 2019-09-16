@@ -1,5 +1,5 @@
 from solution import NestedSolution
-from event_vector import NestedSolutionEventVector
+from algo.event_vector import NestedSolutionEventVector
 from enumerator import SolutionsEnumerator
 
 

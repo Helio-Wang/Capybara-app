@@ -1,8 +1,11 @@
 from solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter, BestKSolutionGenerator
-from event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
+from algo.event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
 
 
 class Reconciliator:
+    """
+    General class for updating the dynamic programming matrices
+    """
     def __init__(self, host_tree, parasite_tree, leaf_map,
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold):
         self.solution_generator = None
@@ -232,13 +235,13 @@ class ReconciliatorEnumerator(Reconciliator):
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum):
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
-        if task != 1:
-            if maximum == float('Inf'):
-                self.solution_generator = SolutionGeneratorCounter()
-            else:
-                self.solution_generator = SolutionGenerator(False)
-        else:
+
+        if task == 1:
             self.solution_generator = SolutionGeneratorEventVector()
+        elif task == 0 and maximum == float('Inf'):
+            self.solution_generator = SolutionGeneratorCounter()
+        else:
+            self.solution_generator = SolutionGenerator(False)
         self.init_matrices()
 
 
@@ -247,6 +250,7 @@ class ReconciliatorBestKEnumerator(Reconciliator):
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, k):
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
+
         self.solution_generator = BestKSolutionGenerator(k)
         self.init_matrices()
         self.maximum_cost = -float('Inf')

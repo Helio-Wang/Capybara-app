@@ -1,4 +1,7 @@
 class TreeNode:
+    """
+    Node in a rooted ordered full binary tree
+    """
     def __init__(self, key):
         self.parent = None
         self.left_child = None
@@ -78,6 +81,9 @@ class TreeNode:
 
 
 class Tree:
+    """
+    Rooted ordered full binary tree
+    """
     def __init__(self, key):
         self.nodes = []
         self.root = TreeNode(key)
@@ -132,7 +138,7 @@ class Tree:
         return '(' + ','.join([left_string, right_string]) + ')' + repr(node)
 
     def is_full(self):
-        # we assume that the trees are full (all internal nodes have out-degree 2)
+        # for the problem we assume that all trees are full (all internal nodes have out-degree 2)
         for node in self:
             if not node.is_leaf():
                 if not node.has_left_child() or not node.has_right_child():

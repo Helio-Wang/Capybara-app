@@ -49,7 +49,7 @@ class SolutionsEnumerator:
         self.current_index = 0
         self.writer = writer
         self.maximum = maximum
-        self.acyclic = acyclic
+        self.acyclic_only = acyclic
 
         self.current_mapping = {}
         self.current_text = []  # text for the printing the current solution
@@ -77,7 +77,7 @@ class SolutionsEnumerator:
 
             # is the current solution acyclic?
             is_acyclic = False
-            if self.acyclic:
+            if self.acyclic_only:
                 transfer_edges = cyclicity.find_transfer_edges(self.data.host_tree,
                                                                self.current_mapping, self.transfer_candidates)
                 if not transfer_edges:
@@ -86,10 +86,10 @@ class SolutionsEnumerator:
                     is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
 
             # write the solution only if it is acyclic, or if the user wants both
-            if not self.acyclic or is_acyclic:
+            if not self.acyclic_only or is_acyclic:
                 num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
-                self.writer.write(f'\n[{label}]\n')
+                self.writer.write(f'\n[{str(num_acyclic) if not label else label}]\n')
 
             if not self.merge_stack:
                 break

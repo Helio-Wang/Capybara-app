@@ -3,7 +3,7 @@ from solution import NestedSolution
 
 class UF:
     """
-    weighted quick-union UF with path compression by halving
+    Weighted quick-union UF with path compression by halving
     amortized constant time for both union and find
     """
     def __init__(self, n):
@@ -148,6 +148,9 @@ def is_cyclic(graph):
 
 
 def get_associations(node):
+    """
+    Generate the set of associations from the children of an OR node
+    """
     if node.composition_type != NestedSolution.MULTIPLE:
         yield node.association
     else:
@@ -157,6 +160,9 @@ def get_associations(node):
 
 
 def full_flatten(node):
+    """
+    Generate all children of an OR node
+    """
     if node.composition_type != NestedSolution.MULTIPLE:
         yield node
     else:
@@ -165,62 +171,12 @@ def full_flatten(node):
 
 
 def flatten(node):
+    """
+    Generate all children of an OR node except the leaves
+    """
     if node.composition_type == NestedSolution.SIMPLE:
         yield node
     else:
         for child in node.children:
             yield child
-
-
-def strong_class_string(parasite_tree, mapping, events):
-    string = []
-    mapp = []
-    for p in parasite_tree:
-        if p.is_leaf():
-            continue
-        if events[p] == 2:
-            string.append(3)
-            mapp.append(0)
-        elif events[p] == 0:
-            string.append(1)
-            mapp.append(mapping[p].index+1)
-        elif events[p] == 1:
-            string.append(2)
-            mapp.append(mapping[p].index+1)
-    return tuple(string + mapp)
-
-
-def distance(a, b):
-    if a == b:
-        return 0
-    return 1 + distance(a, b.parent)
-
-
-def count_event_vector(parasite_tree, host_tree, mapping):
-    a, b, c, d = 0, 0, 0, 0
-    for p in parasite_tree:
-        if p.is_leaf():
-            continue
-
-        h = mapping[p]
-        p1, p2 = p.left_child, p.right_child
-        h1, h2 = mapping[p1], mapping[p2]
-
-        if not h.is_ancestor_of(h1):  # (p,p1) is the transfer edge
-            c += 1
-            d += distance(h, h2)
-
-        elif not h.is_ancestor_of(h2):  # (p,p2) is the transfer edge
-            c += 1
-            d += distance(h, h1)
-
-        else:
-            d += distance(h, h1) + distance(h, h2)
-            if not (h1.is_ancestor_of(h2) or h2.is_ancestor_of(h1)) \
-                    and find_lca(host_tree.root, h1, h2) == h:  # co-speciation
-                d -= 2
-                a += 1
-            else:  # duplication
-                b += 1
-    return a, b, c, d
 

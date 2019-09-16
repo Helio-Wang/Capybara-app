@@ -3,7 +3,10 @@ from reconciliator import ReconciliatorEnumerator
 from util import full_flatten
 
 
-class ReconValidator(ReconciliatorEnumerator):
+class EventReconciliator(ReconciliatorEnumerator):
+    """
+    Recover optimal solutions knowing all events or all event and non-host-switch hosts
+    """
     def __init__(self, host_tree, parasite_tree, leaf_map,
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task,
                  mapping, events):

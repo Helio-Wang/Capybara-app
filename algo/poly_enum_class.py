@@ -3,35 +3,6 @@ from util import full_flatten
 from solution import NestedSolution
 
 
-class EnumTreeNode(TreeNode):
-    def __init__(self, key, label):
-        super().__init__(key)
-        self.label = label
-        self.signature = None
-        self.nodes = set()
-
-    def mark(self, signature, nodes):
-        self.signature = signature
-        self.nodes = nodes
-
-
-class EnumTree:
-    def __init__(self, parasite_tree):
-        self.tree = {p: EnumTreeNode(p.key, p.label) for p in parasite_tree}
-        for p in parasite_tree:
-            if not p.is_leaf():
-                self.tree[p].add_child(self.tree[p.left_child])
-                self.tree[p].add_child(self.tree[p.right_child])
-
-    def traverse(self):
-        mapping, events = {}, {}
-        for p, ep in self.tree.items():
-            event, association = ep.signature
-            mapping[p] = None if not association else association.host
-            events[p] = event
-        return mapping, events
-
-
 def get_grandchildren(node, position):
     if position == 0:
         if node.left_grandchildren is None:
@@ -76,6 +47,35 @@ def signature_update_strong_class(table, node):
         table[signature] = {node}
     else:
         table[signature].add(node)
+
+
+class EnumTreeNode(TreeNode):
+    def __init__(self, key, label):
+        super().__init__(key)
+        self.label = label
+        self.signature = None
+        self.nodes = set()
+
+    def mark(self, signature, nodes):
+        self.signature = signature
+        self.nodes = nodes
+
+
+class EnumTree:
+    def __init__(self, parasite_tree):
+        self.tree = {p: EnumTreeNode(p.key, p.label) for p in parasite_tree}
+        for p in parasite_tree:
+            if not p.is_leaf():
+                self.tree[p].add_child(self.tree[p.left_child])
+                self.tree[p].add_child(self.tree[p.right_child])
+
+    def traverse(self):
+        mapping, events = {}, {}
+        for p, ep in self.tree.items():
+            event, association = ep.signature
+            mapping[p] = None if not association else association.host
+            events[p] = event
+        return mapping, events
 
 
 class ClassEnumerator:
