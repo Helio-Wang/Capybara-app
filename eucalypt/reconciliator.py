@@ -1,5 +1,5 @@
-from solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter, BestKSolutionGenerator
-from algo.event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
+from eucalypt.solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter, BestKSolutionGenerator
+from equivalence.event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
 
 
 class Reconciliator:

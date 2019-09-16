@@ -1,6 +1,6 @@
-from solution import Association, NestedSolution
-from reconciliator import ReconciliatorEnumerator
-from util import full_flatten
+from eucalypt.solution import Association, NestedSolution
+from eucalypt.reconciliator import ReconciliatorEnumerator
+from eucalypt.util import full_flatten
 
 
 class EventReconciliator(ReconciliatorEnumerator):

@@ -1,5 +1,5 @@
-from solution import NestedSolution
-import cyclicity
+from eucalypt.solution import NestedSolution
+from eucalypt import cyclicity
 
 
 class SolutionIterator:

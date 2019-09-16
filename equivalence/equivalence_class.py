@@ -1,6 +1,6 @@
-from util import flatten, full_flatten
-from tree import TreeNode
-from solution import Association, NestedSolution
+from eucalypt.util import flatten, full_flatten
+from eucalypt.tree import TreeNode
+from eucalypt.solution import Association, NestedSolution
 
 
 class NestedClass(NestedSolution):

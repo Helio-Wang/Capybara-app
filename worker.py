@@ -2,12 +2,9 @@ import datetime
 import math
 import time
 import PyQt5 as qt
-from solution import NestedSolution
-import reconciliator
-import cyclicity
-import enumerator
-import enumerate_classes as cla
-from algo import event_reconciliator, poly_enum_class as cenu
+from eucalypt.solution import NestedSolution
+from eucalypt import cyclicity, enumerator, reconciliator
+from equivalence import event_reconciliator, poly_enum_class as cenu, enumerate_classes as cla
 
 
 class WorkerData:

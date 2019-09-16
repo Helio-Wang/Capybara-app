@@ -1,4 +1,4 @@
-from solution import NestedSolution
+from eucalypt.solution import NestedSolution
 
 
 class UF:

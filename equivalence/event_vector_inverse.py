@@ -1,6 +1,6 @@
-from solution import NestedSolution
-from algo.event_vector import NestedSolutionEventVector
-from enumerator import SolutionsEnumerator
+from eucalypt.solution import NestedSolution
+from equivalence.event_vector import NestedSolutionEventVector
+from eucalypt.enumerator import SolutionsEnumerator
 
 
 class VectorEnumerator:

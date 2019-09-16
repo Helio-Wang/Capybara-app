@@ -2,7 +2,7 @@ import os
 import sys
 import PyQt5 as qt
 import PyQt5.QtWidgets as qtw
-import nexparser
+from eucalypt import nexparser
 import worker
 
 
@@ -292,6 +292,17 @@ class TaskBox(qtw.QGroupBox):
         self.boxEq1.toggled.connect(lambda: self.validate(1, self.boxEq1))
         self.boxEq2.toggled.connect(lambda: self.validate(2, self.boxEq2))
         self.boxEq3.toggled.connect(lambda: self.validate(3, self.boxEq3))
+        self.boxAll.setToolTip('A <b>solution</b> is a reconciliation of minimum cost.')
+        self.boxEq1.setToolTip('The <b>event vector</b> of a reconciliation is a vector of four integers:'
+                               'the number of occurrences of cospeciation, duplication, host-switch, or loss event.<p>'
+                               'Two reconciliations are considered equivalent if they have the same event vector.</p>')
+        self.boxEq2.setToolTip('The <b>event partition</b> of a reconciliation is a partition of the parasite nodes'
+                               'into three subsets: cospeciation, duplication, and host-switch.<p>'
+                               'Two reconciliations are considered equivalent if, for each parasite node,'
+                               'the associated events are the same.</p>')
+        self.boxEq3.setToolTip('Two reconciliations are considered <b>strongly equivalent</b> if, '
+                               'for each parasite node, the associated events are the same, moreover, '
+                               'the associated hosts are also the same except when the event is a host-switch.')
 
         vlayout = qtw.QVBoxLayout()
         vlayout.addWidget(self.boxAll)
@@ -352,7 +363,7 @@ class MainAppWindow(qtw.QWidget):
         self.btnEnumerate.clicked.connect(self.enumerate_event)
 
         self.btnSave = qtw.QPushButton(' Save', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton))
-        self.btnSave.setToolTip('<b>Save</b> the output to a file')
+        self.btnSave.setToolTip('<b>Save</b> the text output to a file')
         self.btnSave.setFixedSize(80, 50)
         self.btnSave.clicked.connect(self.save_event)
 
@@ -552,7 +563,7 @@ class SuboptWindow(MainAppWindow):
         self.btnCount.setVisible(False)
         self.taskBox.setVisible(False)
 
-        self.groupBox = qtw.QGroupBox('Maximum number of output.')
+        self.groupBox = qtw.QGroupBox('Maximum number of output  ')
         self.limitText = qtw.QLineEdit()
         self.limitText.setText('100')
         hlayout = qtw.QHBoxLayout()
@@ -561,10 +572,10 @@ class SuboptWindow(MainAppWindow):
         self.groupBox.setLayout(hlayout)
         self.groupBox.setMaximumHeight(200)
 
-        self.groupBox2 = qtw.QGroupBox('Filter out cyclic solutions?. ')
+        self.groupBox2 = qtw.QGroupBox('Filter out cyclic solutions?  ')
         vlayout2 = qtw.QVBoxLayout()
-        onlyButton = qtw.QRadioButton('Keep only acyclic (slower)')
-        bothButton = qtw.QRadioButton('Keep both cyclic and acyclic')
+        onlyButton = qtw.QRadioButton('Keep only acyclic (slower)  ')
+        bothButton = qtw.QRadioButton('Keep both cyclic and acyclic  ')
         bothButton.setChecked(True)
         onlyButton.toggled.connect(self.change_cyclic)
         vlayout2.addWidget(bothButton)
