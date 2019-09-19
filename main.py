@@ -46,11 +46,12 @@ def handle_overwrite(filename):
     return True
 
 
-def open_dialog():
+def open_dialog(nex=True):
     """
-    Dialog for opening nexus files
+    Dialog for opening nexus or txt files
     """
-    filename, _ = qtw.QFileDialog.getOpenFileName(None, 'Open a Nexus file', '', 'Nexus Files (*.nex)',
+    filename, _ = qtw.QFileDialog.getOpenFileName(None, f'Open a {"Nexus" if nex else "text"} file', '',
+                                                  'Nexus Files (*.nex)' if nex else 'Text Files (*.txt)',
                                                   options=qtw.QFileDialog.Options()
                                                         | qtw.QFileDialog.DontUseNativeDialog)
     if not filename or not test_open(filename):
@@ -58,16 +59,22 @@ def open_dialog():
     return True, filename
 
 
-def save_dialog(default_name):
+def save_dialog(default_name, default_ext):
     """
     Custom dialog for saving text files
     """
+    # force the extension manually for now
     filename, _ = qtw.QFileDialog.getSaveFileName(None, 'Save the output file', default_name,
-                                                  'Text Files (*.txt) ;; All Files (*)',
+                                                  f'{"Text Files (*.txt)" if default_ext == ".txt" else "DOT Files (*.dot)"}'
+                                                  f' ;; All Files (*)',
                                                   options=qtw.QFileDialog.Options()
                                                         | qtw.QFileDialog.DontUseNativeDialog
                                                         | qtw.QFileDialog.DontConfirmOverwrite)
-    if not filename or not handle_overwrite(filename):
+    if not filename:
+        return False, ''
+    if filename[-4:] != default_ext:
+        filename += default_ext
+    if not handle_overwrite(filename):
         return False, ''
     return True, filename
 
@@ -154,7 +161,7 @@ class EnumerateDialog(qtw.QDialog):
         self.label_output = True
         vlayout3 = qtw.QVBoxLayout()
         if self.task == 0:
-            groupBox3 = qtw.QGroupBox('Filter out cyclic solutions ')
+            groupBox3 = qtw.QGroupBox('Filter out cyclic solutions?\t ')
             onlyButton = qtw.QRadioButton('Keep only acyclic (slower)')
             bothButton = qtw.QRadioButton('Keep both cyclic and acyclic')
             bothButton.setChecked(True)
@@ -166,18 +173,26 @@ class EnumerateDialog(qtw.QDialog):
             groupBox3 = qtw.QGroupBox('Event vector enumeration ')
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Reconciliation only')
+            onlyButton.setToolTip('When checked, the event vector will <b>not</b> be used as '
+                                  'the caption of the solution.')
             bothButton = qtw.QRadioButton('Output the event vector (as caption) with the reconciliation')
+            bothButton.setToolTip('<b></b>When checked, the event vector will be used as '
+                                  'the name of the solution in the Cophy Reconciliation Viewer.')
             bothButton.setChecked(True)
             bothButton.toggled.connect(self.check_vector_output)
             vlayout3.addWidget(bothButton)
             vlayout3.addWidget(onlyButton)
 
         else:
-            groupBox3 = qtw.QGroupBox('Event vector enumeration ')
+            groupBox3 = qtw.QGroupBox('Output type ')
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Output the labels only')
+            onlyButton.setToolTip(f'<b></b>When checked, in a solution each node receives a label '
+                                  f'({"event" if task == 2 else "event and a host name if available"}). The output'
+                                  f' will not be compatible with Cophy Reconciliation Viewer.')
             onlyButton.setChecked(True)
             bothButton = qtw.QRadioButton('Output one reconciliation (much slower)')
+            bothButton.setToolTip('<b></b>When checked, in a solution each node receives a host name.')
             onlyButton.toggled.connect(self.check_label_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
@@ -319,6 +334,34 @@ class TaskBox(qtw.QGroupBox):
             self.tasks.remove(task)
 
 
+class ConvertOptionBox(qtw.QGroupBox):
+    def __init__(self):
+        super().__init__()
+        self.setTitle('Visualization task ')
+        self.hostButton = qtw.QRadioButton('Host tree')
+        self.hostButton.setToolTip('<b></b>Extract the host tree for visualization')
+        self.parasiteButton = qtw.QRadioButton('Parasite tree')
+        self.parasiteButton.setToolTip('<b></b>Extract the parasite tree for visualization')
+        self.allButton = qtw.QRadioButton('All event partitions or equivalence classes (Animation)')
+        self.allButton.setChecked(True)
+        self.allButton.setToolTip('<b></b>Extract all solutions in the file (event partitions or equivalence classes)'
+                                  'for animated visualization')
+        vlayout = qtw.QVBoxLayout()
+        vlayout.addWidget(self.hostButton)
+        vlayout.addWidget(self.parasiteButton)
+        vlayout.addWidget(self.allButton)
+        self.setLayout(vlayout)
+
+        self.task = 2
+        self.hostButton.toggled.connect(lambda: self.validate(0, self.hostButton))
+        self.parasiteButton.toggled.connect(lambda: self.validate(1, self.parasiteButton))
+        self.allButton.toggled.connect(lambda: self.validate(2, self.allButton))
+
+    def validate(self, task, box):
+        if box.isChecked():
+            self.task = task
+
+
 class MainAppWindow(qtw.QWidget):
     sig = qt.QtCore.pyqtSignal(list)
     sig2 = qt.QtCore.pyqtSignal(list)
@@ -328,7 +371,7 @@ class MainAppWindow(qtw.QWidget):
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
 
-        self.create_widget()
+        self.create_widgets()
         self.set_layout()
         self.start_thread()
 
@@ -336,6 +379,8 @@ class MainAppWindow(qtw.QWidget):
         self.reset()
         self.has_output = False
         self.unsaved = False
+        self.default_output_name = 'log.txt'
+        self.output_ext = '.txt'
 
     def start_thread(self):
         self.count_thread = worker.CountThread()
@@ -346,7 +391,7 @@ class MainAppWindow(qtw.QWidget):
         self.sig2.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
 
-    def create_widget(self):
+    def create_widgets(self):
         self.btnOpen = qtw.QPushButton('Open', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton))
         self.btnOpen.setToolTip('<b>Open</b> a Nexus file')
         self.btnOpen.setFixedSize(105, 50)
@@ -484,7 +529,7 @@ class MainAppWindow(qtw.QWidget):
                                      qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             return
         task = list(self.taskBox.tasks).pop()
-        success, filename = save_dialog('output.txt')
+        success, filename = save_dialog('output.txt', '.txt')
         if not success:
             return
         while True:
@@ -507,7 +552,7 @@ class MainAppWindow(qtw.QWidget):
         progress_dlg.exec_()
 
     def save_event(self):
-        success, filename = save_dialog('log.txt')
+        success, filename = save_dialog(self.default_output_name, self.output_ext)
         if not success:
             return
         with open(filename, 'w') as f:
@@ -541,6 +586,9 @@ class MainAppWindow(qtw.QWidget):
                                       qtw.QMessageBox.Yes | qtw.QMessageBox.Cancel, qtw.QMessageBox.Yes)
 
         if msg == qtw.QMessageBox.Yes:
+            clipboard = qtw.QApplication.clipboard()
+            event = qt.QtCore.QEvent(qt.QtCore.QEvent.Clipboard)
+            qtw.QApplication.sendEvent(clipboard, event)
             event.accept()
         else:
             event.ignore()
@@ -558,8 +606,8 @@ class SuboptWindow(MainAppWindow):
         self.sig3.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
 
-    def create_widget(self):
-        super().create_widget()
+    def create_widgets(self):
+        super().create_widgets()
         self.btnCount.setVisible(False)
         self.taskBox.setVisible(False)
 
@@ -633,7 +681,7 @@ class SuboptWindow(MainAppWindow):
     def enumerate_event(self):
         if not self.validate_limit():
             return
-        success, filename = save_dialog('output.txt')
+        success, filename = save_dialog('output.txt', '.txt')
         if not success:
             return
         progress_dlg = OutputProgressDialog()
@@ -645,6 +693,88 @@ class SuboptWindow(MainAppWindow):
         progress_dlg.exec_()
 
 
+class ConvertWindow(MainAppWindow):
+    sig4 = qt.QtCore.pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+        self.default_output_name = 'output.dot'
+        self.output_ext = '.dot'
+
+    def start_thread(self):
+        self.enum_thread = worker.DotFileThread()
+        self.sig4.connect(self.enum_thread.on_source)
+        self.enum_thread.sig.connect(self.thread_output)
+
+    def create_widgets(self):
+        super().create_widgets()
+        self.btnCount.setVisible(False)
+        self.taskBox.setVisible(False)
+        self.summaryTextBox.setVisible(False)
+        self.btnOpen.setToolTip('<b>Open</b> an enumeration output file')
+        self.btnEnumerate.setText('Run')
+        self.btnEnumerate.setToolTip('<b>Run</b> extraction/conversion for visualization')
+        self.btnSave.setToolTip('<b>Save</b> the output to a DOT file')
+        self.taskBox = ConvertOptionBox()
+        self.btnCopy = qtw.QPushButton('Copy', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogHelpButton))
+        self.btnCopy.setFixedSize(80, 50)
+        self.btnCopy.setToolTip('<b>Copy</b> the entire output to the clipboard')
+        self.btnCopy.clicked.connect(self.copy_event)
+
+    def set_layout(self):
+        main_layout = qtw.QVBoxLayout()
+        hlayout = qtw.QHBoxLayout()
+        hlayout.addWidget(self.btnOpen)
+        hlayout.addWidget(self.taskBox)
+        hlayout.addWidget(self.btnEnumerate)
+        hlayout.setSpacing(30)
+        main_layout.addLayout(hlayout)
+        main_layout.addItem(qtw.QSpacerItem(10, 10))
+
+        glayout = qtw.QGridLayout()
+        glayout.addWidget(qtw.QLabel('Input file'), 1, 1, qt.QtCore.Qt.AlignTop)
+        glayout.addWidget(self.inNameBox, 1, 2)
+        vlayout = qtw.QVBoxLayout()
+        vlayout.addWidget(qtw.QLabel('Output'))
+        vlayout.addWidget(self.btnSave)
+        vlayout.addWidget(self.btnCopy)
+        glayout.addLayout(vlayout, 3, 1, qt.QtCore.Qt.AlignTop)
+        glayout.addWidget(self.outTextBox, 3, 2)
+        glayout.setSpacing(10)
+        main_layout.addLayout(glayout)
+        main_layout.setContentsMargins(30, 30, 30, 30)
+        self.setLayout(main_layout)
+
+    def copy_event(self):
+        cb = qtw.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(self.outTextBox.toPlainText(), mode=cb.Clipboard)
+        qtw.QMessageBox.information(self, 'Success', 'The output has been copied to the clipboard!',
+                                    qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
+
+    def open_event(self):
+        if self.has_output and self.unsaved:
+            msg = qtw.QMessageBox.warning(self, 'Confirm new input',
+                                          'The current output will be lost if unsaved.\n'
+                                          'Do you want to continue?',
+                                          qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel, qtw.QMessageBox.Ok)
+            if msg == qtw.QMessageBox.Cancel:
+                return
+        success, filename = open_dialog(False)
+        if not success:
+            return
+        self.reset()
+        self.inNameBox.setText(filename)
+        self.btnEnumerate.setEnabled(True)
+        self.btnSave.setEnabled(True)
+
+    def enumerate_event(self):
+        self.outTextBox.clear()
+        self.sig4.emit([self.inNameBox.text(), self.taskBox.task])
+        self.enum_thread.start()
+        self.in_thread()
+
+
 class WelcomeWindow(qtw.QDialog):
     def __init__(self):
         super().__init__()
@@ -654,15 +784,19 @@ class WelcomeWindow(qtw.QDialog):
         vlayout.setSpacing(10)
         main_button = qtw.QPushButton('Standard counting and enumeration')
         subopt_button = qtw.QPushButton('Sub-optimal enumeration')
+        viz_button = qtw.QPushButton('Convert enumeration files for visualization')
 
-        for b in (main_button, subopt_button):
+        for b in (main_button, subopt_button, viz_button):
             b.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
 
         self.choice = None
         main_button.clicked.connect(lambda: self.choose(1))
         subopt_button.clicked.connect(lambda: self.choose(2))
+        viz_button.clicked.connect(lambda: self.choose(3))
+
         vlayout.addWidget(main_button)
         vlayout.addWidget(subopt_button)
+        vlayout.addWidget(viz_button)
         self.setLayout(vlayout)
         self.show()
 
@@ -674,14 +808,17 @@ class WelcomeWindow(qtw.QDialog):
 if __name__ == '__main__':
     app = qtw.QApplication(sys.argv)
     welcome = WelcomeWindow()
-    welcome.exec()
-    if welcome.choice == 1:
-        widget = MainAppWindow()
-    elif welcome.choice == 2:
-        widget = SuboptWindow()
+    value = welcome.exec()
+    if value == qtw.QDialog.Accepted:
+        if welcome.choice == 1:
+            widget = MainAppWindow()
+        elif welcome.choice == 2:
+            widget = SuboptWindow()
+        else:
+            widget = ConvertWindow()
     else:
         sys.exit(0)
-    widget.show()
     widget.move(qtw.QApplication.desktop().screen().rect().center() - widget.rect().center())
+    widget.show()
     app.exec_()
 

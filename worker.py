@@ -3,6 +3,7 @@ import math
 import time
 import PyQt5 as qt
 from eucalypt.solution import NestedSolution
+from eucalypt.nexparser import tree_from_newick
 from eucalypt import cyclicity, enumerator, reconciliator
 from equivalence import event_reconciliator, poly_enum_class as cenu, enumerate_classes as cla
 
@@ -491,4 +492,82 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 percentage = new_percentage
                 self.sig2.emit(int(percentage))
         self.sig2.emit(100)
+
+
+class DotFileThread(qt.QtCore.QThread):
+    sig = qt.QtCore.pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.input_name = None
+        self.task = None
+        self.cosp_color = '"#fec771"'
+        self.dup_color = '"#64e291"'
+        self.switch_color = '"#64c4ed"'
+        self.leaf_color = '"#fcfafa"'
+
+    def on_source(self, options):
+        self.input_name = options[0]
+        self.task = options[1]
+
+    def write_plain_tree(self, tree):
+        self.sig.emit('digraph {')
+        self.sig.emit('node [shape="ellipse"]')
+        for node in tree:
+            if node.is_root():
+                continue
+            self.sig.emit(f'"{node.parent.label}" -> "{node.label}"')
+        self.sig.emit('};')
+
+    def write_colored_tree(self, parasite_tree, events, hosts):
+        self.sig.emit('digraph {')
+        self.sig.emit('node [shape="ellipse" style=filled]')
+        for p in parasite_tree:
+            color = self.cosp_color if events[p.label] == 'C' else \
+                    self.dup_color if events[p.label] == 'D' else \
+                    self.switch_color if events[p.label] == 'S' else \
+                    self.leaf_color
+            tooltip = f'"{hosts[p.label]}"'
+            self.sig.emit(f'"{p.label}" [fillcolor={color} tooltip={tooltip}]')
+        for p in parasite_tree:
+            if p.is_root():
+                continue
+            self.sig.emit(f'"{p.parent.label}" -> "{p.label}"')
+        self.sig.emit('};')
+
+    def run(self):
+        with open(self.input_name, 'r') as f:
+            if self.task == 2:
+                parasite_tree = None
+                line = f.readline()
+                while line:
+                    if not parasite_tree and 'parasite tree' in line.lower():
+                        nwk = line.rstrip().split('= ')[1]
+                        parasite_tree = tree_from_newick(nwk, '!P')
+                    if line[0] not in ('#', '['):
+                        events, hosts = {}, {}
+                        for u in line.rstrip().split(', '):
+                            p, v = u.split('@')
+                            h, e = v.split('|')
+                            events[p], hosts[p] = e, h
+                        if not parasite_tree:
+                            self.sig.emit(f'Error: The parasite tree is not found in the file.')
+                            break
+                        self.write_colored_tree(parasite_tree, events, hosts)
+                    line = f.readline()
+            else:  # host tree or parasite tree
+                tree = None
+                line = f.readline()
+                while line:
+                    if ('host tree' if self.task == 0 else 'parasite tree') in line.lower():
+                        nwk = line.rstrip().split('= ')[1]
+                        tree = tree_from_newick(nwk, '!H' if self.task == 0 else '!P')
+                        break
+                    line = f.readline()
+                if tree:
+                    self.write_plain_tree(tree)
+                else:
+                    self.sig.emit(f'The {"host" if self.task == 0 else "parasite"} tree is not found in the file.')
+        self.sig.emit('')
+        self.exit(0)
 
