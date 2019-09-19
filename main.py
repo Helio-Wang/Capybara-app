@@ -586,9 +586,6 @@ class MainAppWindow(qtw.QWidget):
                                       qtw.QMessageBox.Yes | qtw.QMessageBox.Cancel, qtw.QMessageBox.Yes)
 
         if msg == qtw.QMessageBox.Yes:
-            clipboard = qtw.QApplication.clipboard()
-            event = qt.QtCore.QEvent(qt.QtCore.QEvent.Clipboard)
-            qtw.QApplication.sendEvent(clipboard, event)
             event.accept()
         else:
             event.ignore()
@@ -773,6 +770,9 @@ class ConvertWindow(MainAppWindow):
         self.sig4.emit([self.inNameBox.text(), self.taskBox.task])
         self.enum_thread.start()
         self.in_thread()
+
+    def closeEvent(self, event):
+        event.accept()
 
 
 class WelcomeWindow(qtw.QDialog):

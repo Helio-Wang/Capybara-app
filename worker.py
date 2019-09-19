@@ -546,10 +546,15 @@ class DotFileThread(qt.QtCore.QThread):
                         parasite_tree = tree_from_newick(nwk, '!P')
                     if line[0] not in ('#', '['):
                         events, hosts = {}, {}
-                        for u in line.rstrip().split(', '):
-                            p, v = u.split('@')
-                            h, e = v.split('|')
-                            events[p], hosts[p] = e, h
+                        try:
+                            for u in line.rstrip().split(', '):
+                                p, v = u.split('@')
+                                h, e = v.split('|')
+                                events[p], hosts[p] = e, h
+                        except ValueError:
+                            self.sig.emit(f'Error: The file format is not recognized '
+                                          f'(Not event partitions or equivalence classes?).')
+                            break
                         if not parasite_tree:
                             self.sig.emit(f'Error: The parasite tree is not found in the file.')
                             break
