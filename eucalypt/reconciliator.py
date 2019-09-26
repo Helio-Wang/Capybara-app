@@ -253,12 +253,15 @@ class ReconciliatorBestKEnumerator(Reconciliator):
 
         self.solution_generator = BestKSolutionGenerator(k)
         self.init_matrices()
-        self.maximum_cost = -float('Inf')
+        self.cost_summary = {}
 
     def run(self):
         self.fill_matrices()
         root = self.finishing_up()
         for solution in root.children:
-            self.maximum_cost = max(solution.cost, self.maximum_cost)
+            if solution.cost not in self.cost_summary:
+                self.cost_summary[solution.cost] = 1
+            else:
+                self.cost_summary[solution.cost] += 1
         return root
 

@@ -48,7 +48,7 @@ class WorkerData:
                                                            cost_vector[2] * self.multiplier,
                                                            cost_vector[3] * self.multiplier, self.threshold, k)
         root = recon.run()
-        return root.cost / self.multiplier, recon.maximum_cost / self.multiplier, root
+        return root.cost / self.multiplier, recon.cost_summary, root
 
 
 class CountThread(qt.QtCore.QThread):
@@ -387,7 +387,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
 
-    def write_header(self, opt_cost, max_cost):
+    def write_header(self, opt_cost, cost_summary):
         self.writer.write('#--------------------\n')
         self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
         self.writer.write('#Symbiont tree      = {}\n'.format(self.data.parasite_tree))
@@ -406,7 +406,8 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.writer.write('#Loss cost          = {}\n'.format(self.cost_vector[3]))
         self.writer.write('#K                  = {}\n'.format(self.k))
         self.writer.write('#Optimal cost       = {}\n'.format(opt_cost))
-        self.writer.write('#Maximum cost       = {}\n'.format(max_cost))
+        for cost in sorted(cost_summary.keys()):
+            self.writer.write(f'#Number of solutions having cost {cost / self.data.multiplier} = {cost_summary[cost]}')
         self.writer.write('#--------------------\n')
 
     def run(self, label=''):
@@ -421,9 +422,9 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
             self.sig.emit('Enumerate the best K solutions...')
 
         self.sig2.emit(1)
-        opt_cost, max_cost, root = self.data.enumerate_best_k(self.cost_vector, self.k)
+        opt_cost, cost_summary, root = self.data.enumerate_best_k(self.cost_vector, self.k)
         try:
-            self.write_header(opt_cost, max_cost)
+            self.write_header(opt_cost, cost_summary)
             self.sig2.emit(5)
             self.sig.emit('------')
             self.root = root
@@ -438,7 +439,8 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         except ValueError:
             return
         self.sig.emit('Optimal cost = {}'.format(opt_cost))
-        self.sig.emit('Maximum cost = {}'.format(max_cost))
+        for cost in sorted(cost_summary.keys()):
+            self.sig.emit(f'Number of solutions having cost {cost / self.data.multiplier} = {cost_summary[cost]}')
         self.sig.emit('Output written to {}'.format(self.filename))
         self.sig.emit('------')
         self.sig.emit(f'Job finished at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
@@ -495,6 +497,9 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
 
 
 class DotFileThread(qt.QtCore.QThread):
+    """
+    Thread starts with the Run button event, sends one or more trees in DOT format
+    """
     sig = qt.QtCore.pyqtSignal(str)
 
     def __init__(self):
