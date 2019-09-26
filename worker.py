@@ -124,7 +124,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         super().__init__(data=None, root=None, writer=None, maximum=None, acyclic=None)
         self.num_solutions, self.num_acyclic = 0, 0
         self.data, self.cost_vector, self.task, self.filename = None, None, None, None
-        self.maximum, self.acyclic, self.vector, self.label_only = None, None, None, None
+        self.maximum, self.acyclic, self.label_only = None, None, None
         self.writer = None
         self.t0 = 0
 
@@ -135,8 +135,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.filename = options[6]
         self.maximum = options[7]
         self.acyclic_only = options[8]
-        self.vector = options[9]
-        self.label_only = options[10]
+        self.label_only = options[9]
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
 
@@ -270,7 +269,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 break
             self.visit_vector(self.root, target_vector)
             self.writer.write(', '.join(self.current_text))
-            self.writer.write(f'\n[{num_class if not self.vector else str(target_vector.vector)}]\n')
+            self.writer.write(f'\n[{str(target_vector.vector)}]\n')
 
             if self.maximum == float('Inf'):
                 new_percentage = math.ceil(100 * num_class / len(self.root.event_vectors))
@@ -548,7 +547,7 @@ class DotFileThread(qt.QtCore.QThread):
                 while line:
                     if not parasite_tree:
                         line = line.lower()
-                        if 'parasite tree' in line or 'symbiont tree' in line:
+                        if 'symbiont tree' in line:
                             nwk = line.rstrip().split('= ')[1]
                             parasite_tree = tree_from_newick(nwk, '!P')
                     if line[0] not in ('#', '['):
@@ -571,7 +570,7 @@ class DotFileThread(qt.QtCore.QThread):
                 tree = None
                 line = f.readline().lower()
                 while line:
-                    if self.task == 0 and 'host tree' in line or ('parasite tree' in line or 'symbiont tree' in line):
+                    if (self.task == 0 and 'host tree' in line) or 'symbiont tree' in line:
                         nwk = line.rstrip().split('= ')[1]
                         tree = tree_from_newick(nwk, '!H' if self.task == 0 else '!P')
                         break

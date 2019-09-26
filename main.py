@@ -151,13 +151,13 @@ class EnumerateDialog(qtw.QDialog):
         vlayout2 = qtw.QVBoxLayout()
         vlayout2.addWidget(self.nameBox)
         groupBox2.setLayout(vlayout2)
+        groupBox2.setMaximumHeight(100)
 
         layout = qtw.QVBoxLayout()
         layout.addWidget(groupBox2)
         layout.addWidget(groupBox)
 
         self.filter_cyclic = False
-        self.vector_output = True
         self.label_output = True
         vlayout3 = qtw.QVBoxLayout()
         if self.task == 0:
@@ -168,22 +168,10 @@ class EnumerateDialog(qtw.QDialog):
             onlyButton.toggled.connect(self.change_cyclic)
             vlayout3.addWidget(bothButton)
             vlayout3.addWidget(onlyButton)
+            groupBox3.setLayout(vlayout3)
+            layout.addWidget(groupBox3)
 
-        elif self.task == 1:
-            groupBox3 = qtw.QGroupBox('Event vector enumeration ')
-            vlayout3 = qtw.QVBoxLayout()
-            onlyButton = qtw.QRadioButton('Reconciliation only')
-            onlyButton.setToolTip('When checked, the event vector will <b>not</b> be used as '
-                                  'the caption of the solution (for CophyTree Viewer).')
-            bothButton = qtw.QRadioButton('Output the event vector (as caption) with the reconciliation')
-            bothButton.setToolTip('<b></b>When checked, the event vector will be used as '
-                                  'the name of the solution in the CophyTree Viewer.')
-            bothButton.setChecked(True)
-            bothButton.toggled.connect(self.check_vector_output)
-            vlayout3.addWidget(bothButton)
-            vlayout3.addWidget(onlyButton)
-
-        else:
+        elif self.task in (2, 3):
             groupBox3 = qtw.QGroupBox('Output type ')
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Output the labels only')
@@ -196,9 +184,8 @@ class EnumerateDialog(qtw.QDialog):
             onlyButton.toggled.connect(self.check_label_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
-
-        groupBox3.setLayout(vlayout3)
-        layout.addWidget(groupBox3)
+            groupBox3.setLayout(vlayout3)
+            layout.addWidget(groupBox3)
 
         buttons = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel,
                                        qt.QtCore.Qt.Horizontal, self)
@@ -236,9 +223,6 @@ class EnumerateDialog(qtw.QDialog):
 
     def change_cyclic(self, checked):
         self.filter_cyclic = checked
-
-    def check_vector_output(self, checked):
-        self.vector_output = checked
 
     def check_label_output(self, checked):
         self.label_output = checked
@@ -480,8 +464,8 @@ class MainAppWindow(qtw.QWidget):
         if not self.read_data(filename):
             return
         self.inNameBox.setText(filename)
-        self.summaryTextBox.appendPlainText(f"The symbiont tree has\t {self.data.parasite_tree.size()} nodes.\n"
-                                            f"The host tree has\t {self.data.host_tree.size()} nodes.")
+        self.summaryTextBox.appendPlainText(f"The symbiont tree has\t {self.data.parasite_tree.size()}\t nodes.\n"
+                                            f"The host tree has\t {self.data.host_tree.size()}\t nodes.")
         self.outTextBox.append(f'The input file is {filename}\n')
 
     def read_data(self, filename):
@@ -546,7 +530,7 @@ class MainAppWindow(qtw.QWidget):
         progress_dlg = OutputProgressDialog()
         progress_dlg.connectToThread(self.enum_thread)
         self.sig2.emit([self.data] + self.costVectorBox.cost_vector + [task, filename, max_nb,  dlg.filter_cyclic,
-                                                                       dlg.vector_output, dlg.label_output])
+                                                                       dlg.label_output])
         self.enum_thread.start()
         self.in_thread()
         progress_dlg.exec_()

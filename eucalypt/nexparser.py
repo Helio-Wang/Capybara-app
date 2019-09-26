@@ -73,19 +73,19 @@ class NexusParser:
         line = self.reader.readline()
         while line:
             # remove leading and trailing whitespaces, compress inner whitespaces
-            line = ''.join(line.strip())
+            line = ''.join(line.strip()).lower()
             # catch valid file starting line
-            if 'begin parasite' in line.lower() or 'begin host' in line.lower():
+            if 'begin parasite' in line or 'begin host' in line or 'begin symbiont' in line:
                 self.parse_standard_nexus(line)
                 break
-            elif 'begin trees' in line.lower():
-                raise NotImplementedError  # CoRePa format
+            elif 'begin trees' in line:
+                raise NexusFileParserException('This file format is not supported.')
             # skip invalid and empty lines
             line = self.reader.readline()
         if not self.host_tree:
             raise NexusFileParserException('Could not read host tree from Nexux file.')
         if not self.parasite_tree:
-            raise NexusFileParserException('Could not read parasite tree from Nexux file.')
+            raise NexusFileParserException('Could not read symbiont tree from Nexux file.')
         if not self.leaf_map:
             raise NexusFileParserException('Unexpected end of file while searching for DISTRIBUTION section.')
 
@@ -93,9 +93,9 @@ class NexusParser:
         # first construct the two trees
         string_host_tree, string_parasite_tree = self.read_trees(first_line)
         if not string_host_tree:
-            raise NexusFileParserException('Could not read host tree from Nexux file.')
+            raise NexusFileParserException('Could not read host tree from Nexus file.')
         if not string_parasite_tree:
-            raise NexusFileParserException('Could not read parasite tree from Nexux file.')
+            raise NexusFileParserException('Could not read symbiont tree from Nexus file.')
         distribution = self.read_distribution()
         if not distribution:
             raise NexusFileParserException('Unexpected end of file while searching for DISTRIBUTION section.')
@@ -109,7 +109,7 @@ class NexusParser:
         if not self.host_tree.is_full():
             raise NexusFileParserException('Host tree is not full')
         if not self.parasite_tree.is_full():
-            raise NexusFileParserException('Parasite tree is not full')
+            raise NexusFileParserException('Symbiont tree is not full')
 
         # then construct the leaf map
         leaf_label_map = {}
@@ -121,17 +121,17 @@ class NexusParser:
 
             if parasite_label in leaf_label_map:
                 if leaf_label_map[parasite_label] != host_label:
-                    raise NexusFileParserException('A parasite label cannot be associated to two different host labels.')
+                    raise NexusFileParserException('A symbiont label cannot be associated to two different host labels.')
             leaf_label_map[parasite_label] = host_label
         return_code = self.build_leaf_map(leaf_label_map)
         if return_code == 1:
             raise NexusFileParserException('The distribution is not leaf-to-leaf.')
         elif return_code == 2:
-            raise NexusFileParserException('Not every leaf node in parasite tree is mapped.')
+            raise NexusFileParserException('Not every leaf node in symbiont tree is mapped.')
 
     def read_trees(self, first_line):
         string_host_tree, string_parasite_tree = '', ''
-        if 'begin parasite' in first_line:
+        if 'begin parasite' in first_line or 'begin symbiont' in first_line:
             # read parasite first
             string_parasite_tree = self.read_tree_string()
             line = self.reader.readline()
@@ -147,7 +147,7 @@ class NexusParser:
             line = self.reader.readline()
             while line:
                 line = ''.join(line.strip()).lower()
-                if 'begin parasite' in line:
+                if 'begin parasite' in line or 'begin symbiont' in line:
                     string_parasite_tree = self.read_tree_string()
                     break
                 line = self.reader.readline()
@@ -172,8 +172,8 @@ class NexusParser:
     def read_distribution(self):
         line = self.reader.readline()
         while line:
-            line = ''.join(line.strip())
-            if 'range' in line.lower():
+            line = ''.join(line.strip()).lower()
+            if 'range' in line:
                 break
             line = self.reader.readline()
         if not line:
