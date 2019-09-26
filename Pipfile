@@ -10,7 +10,7 @@ pyinstaller = "*"
 pip = "*"
 setuptools = "*"
 pyinstaller = "*"
-pyqt5 = "*"
+pyqt5 = "==5.12"
 
 [requires]
 python_version = "3.6"

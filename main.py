@@ -174,10 +174,10 @@ class EnumerateDialog(qtw.QDialog):
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Reconciliation only')
             onlyButton.setToolTip('When checked, the event vector will <b>not</b> be used as '
-                                  'the caption of the solution.')
+                                  'the caption of the solution (for CophyTree Viewer).')
             bothButton = qtw.QRadioButton('Output the event vector (as caption) with the reconciliation')
             bothButton.setToolTip('<b></b>When checked, the event vector will be used as '
-                                  'the name of the solution in the Cophy Reconciliation Viewer.')
+                                  'the name of the solution in the CophyTree Viewer.')
             bothButton.setChecked(True)
             bothButton.toggled.connect(self.check_vector_output)
             vlayout3.addWidget(bothButton)
@@ -189,7 +189,7 @@ class EnumerateDialog(qtw.QDialog):
             onlyButton = qtw.QRadioButton('Output the labels only')
             onlyButton.setToolTip(f'<b></b>When checked, in a solution each node receives a label '
                                   f'({"event" if task == 2 else "event and a host name if available"}). The output'
-                                  f' will not be compatible with Cophy Reconciliation Viewer.')
+                                  f' will not be compatible with CophyTree Viewer.')
             onlyButton.setChecked(True)
             bothButton = qtw.QRadioButton('Output one reconciliation (much slower)')
             bothButton.setToolTip('<b></b>When checked, in a solution each node receives a host name.')
@@ -256,7 +256,7 @@ class CostVectorBox(qtw.QGroupBox):
         self.reset()
 
         glayout = qtw.QGridLayout()
-        glayout.addWidget(qtw.QLabel('Cospectiation'), 1, 1)
+        glayout.addWidget(qtw.QLabel('Cospeciation'), 1, 1)
         glayout.addWidget(self.cospBox, 1, 2)
         glayout.addWidget(qtw.QLabel('Duplication'), 2, 1)
         glayout.addWidget(self.dupBox, 2, 2)
@@ -308,15 +308,15 @@ class TaskBox(qtw.QGroupBox):
         self.boxEq2.toggled.connect(lambda: self.validate(2, self.boxEq2))
         self.boxEq3.toggled.connect(lambda: self.validate(3, self.boxEq3))
         self.boxAll.setToolTip('A <b>solution</b> is a reconciliation of minimum cost.')
-        self.boxEq1.setToolTip('The <b>event vector</b> of a reconciliation is a vector of four integers:'
+        self.boxEq1.setToolTip('The <b>event vector</b> of a reconciliation is a vector of four integers: '
                                'the number of occurrences of cospeciation, duplication, host-switch, or loss event.<p>'
                                'Two reconciliations are considered equivalent if they have the same event vector.</p>')
-        self.boxEq2.setToolTip('The <b>event partition</b> of a reconciliation is a partition of the parasite nodes'
-                               'into three subsets: cospeciation, duplication, and host-switch.<p>'
-                               'Two reconciliations are considered equivalent if, for each parasite node,'
+        self.boxEq2.setToolTip('The <b>event partition</b> of a reconciliation is a partition of the symbiont nodes '
+                               'into three subsets: cospeciation, duplication, and host-switch nodes.<p>'
+                               'Two reconciliations are considered equivalent if, for each symbiont node,'
                                'the associated events are the same.</p>')
-        self.boxEq3.setToolTip('Two reconciliations are considered <b>strongly equivalent</b> if, '
-                               'for each parasite node, the associated events are the same, moreover, '
+        self.boxEq3.setToolTip('Two reconciliations are considered <b>equivalent</b> if, '
+                               'for each symbiont node, the associated events are the same, moreover, '
                                'the associated hosts are also the same except when the event is a host-switch.')
 
         vlayout = qtw.QVBoxLayout()
@@ -340,11 +340,11 @@ class ConvertOptionBox(qtw.QGroupBox):
         self.setTitle('Visualization task ')
         self.hostButton = qtw.QRadioButton('Host tree')
         self.hostButton.setToolTip('<b></b>Extract the host tree for visualization')
-        self.parasiteButton = qtw.QRadioButton('Parasite tree')
-        self.parasiteButton.setToolTip('<b></b>Extract the parasite tree for visualization')
+        self.parasiteButton = qtw.QRadioButton('Symbiont tree')
+        self.parasiteButton.setToolTip('<b></b>Extract the symbiont tree for visualization')
         self.allButton = qtw.QRadioButton('All event partitions or equivalence classes (Animation)')
         self.allButton.setChecked(True)
-        self.allButton.setToolTip('<b></b>Extract all solutions in the file (event partitions or equivalence classes)'
+        self.allButton.setToolTip('<b></b>Extract all solutions in the file (event partitions or equivalence classes) '
                                   'for animated visualization')
         vlayout = qtw.QVBoxLayout()
         vlayout.addWidget(self.hostButton)
@@ -403,7 +403,7 @@ class MainAppWindow(qtw.QWidget):
         self.btnCount.clicked.connect(self.count_event)
 
         self.btnEnumerate = qtw.QPushButton(' Enumerate', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogSaveButton))
-        self.btnEnumerate.setToolTip('<b>Enumerate</b> all solutions')
+        self.btnEnumerate.setToolTip('<b>Enumerate</b> solutions to a file')
         self.btnEnumerate.setFixedSize(110, 50)
         self.btnEnumerate.clicked.connect(self.enumerate_event)
 
@@ -480,7 +480,7 @@ class MainAppWindow(qtw.QWidget):
         if not self.read_data(filename):
             return
         self.inNameBox.setText(filename)
-        self.summaryTextBox.appendPlainText(f"The parasite tree has\t {self.data.parasite_tree.size()} nodes.\n"
+        self.summaryTextBox.appendPlainText(f"The symbiont tree has\t {self.data.parasite_tree.size()} nodes.\n"
                                             f"The host tree has\t {self.data.host_tree.size()} nodes.")
         self.outTextBox.append(f'The input file is {filename}\n')
 
@@ -614,6 +614,10 @@ class SuboptWindow(MainAppWindow):
         hlayout = qtw.QHBoxLayout()
         hlayout.addWidget(qtw.QLabel('K '))
         hlayout.addWidget(self.limitText)
+        self.limitText.setToolTip('<b></b>The K-best enumeration will output the the first K solutions '
+                                  'with smallest cost. If there are less than K solutions having the minimum cost, '
+                                  'then it will output some solutions having a sub-optimal cost. ')
+        self.groupBox.setToolTip(self.limitText.toolTip())
         self.groupBox.setLayout(hlayout)
         self.groupBox.setMaximumHeight(200)
 
@@ -710,7 +714,7 @@ class ConvertWindow(MainAppWindow):
         self.summaryTextBox.setVisible(False)
         self.btnOpen.setToolTip('<b>Open</b> an enumeration output file')
         self.btnEnumerate.setText('Run')
-        self.btnEnumerate.setToolTip('<b>Run</b> extraction/conversion for visualization')
+        self.btnEnumerate.setToolTip('<b>Run</b> file conversion for visualization')
         self.btnSave.setToolTip('<b>Save</b> the output to a DOT file')
         self.taskBox = ConvertOptionBox()
         self.btnCopy = qtw.QPushButton('Copy', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogHelpButton))
@@ -752,7 +756,7 @@ class ConvertWindow(MainAppWindow):
     def open_event(self):
         if self.has_output and self.unsaved:
             msg = qtw.QMessageBox.warning(self, 'Confirm new input',
-                                          'The current output will be lost if unsaved.\n'
+                                          'The current output will be lost if not saved or copied.\n'
                                           'Do you want to continue?',
                                           qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel, qtw.QMessageBox.Ok)
             if msg == qtw.QMessageBox.Cancel:

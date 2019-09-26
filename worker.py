@@ -154,9 +154,9 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
     def write_header(self, opt_cost):
         self.writer.write('#--------------------\n')
         self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
-        self.writer.write('#Parasite tree      = {}\n'.format(self.data.parasite_tree))
+        self.writer.write('#Symbiont tree      = {}\n'.format(self.data.parasite_tree))
         self.writer.write('#Host tree size     = {}\n'.format(self.data.host_tree.size()))
-        self.writer.write('#Parasite tree size = {}\n'.format(self.data.parasite_tree.size()))
+        self.writer.write('#Symbiont tree size = {}\n'.format(self.data.parasite_tree.size()))
         self.writer.write('#Leaf mapping       = {{{}}}\n'.format(', '.join(map(lambda x: str(x[0]) + '=' + str(x[1]),
                                                                                 self.data.leaf_map.items()))))
         self.writer.write('#--------------------\n')
@@ -390,9 +390,9 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
     def write_header(self, opt_cost, max_cost):
         self.writer.write('#--------------------\n')
         self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
-        self.writer.write('#Parasite tree      = {}\n'.format(self.data.parasite_tree))
+        self.writer.write('#Symbiont tree      = {}\n'.format(self.data.parasite_tree))
         self.writer.write('#Host tree size     = {}\n'.format(self.data.host_tree.size()))
-        self.writer.write('#Parasite tree size = {}\n'.format(self.data.parasite_tree.size()))
+        self.writer.write('#Symbiont tree size = {}\n'.format(self.data.parasite_tree.size()))
         self.writer.write('#Leaf mapping       = {{{}}}\n'.format(', '.join(map(lambda x: str(x[0]) + '=' + str(x[1]),
                                                                                 self.data.leaf_map.items()))))
         self.writer.write('#--------------------\n')
@@ -541,10 +541,15 @@ class DotFileThread(qt.QtCore.QThread):
                 parasite_tree = None
                 line = f.readline()
                 while line:
-                    if not parasite_tree and 'parasite tree' in line.lower():
-                        nwk = line.rstrip().split('= ')[1]
-                        parasite_tree = tree_from_newick(nwk, '!P')
+                    if not parasite_tree:
+                        line = line.lower()
+                        if 'parasite tree' in line or 'symbiont tree' in line:
+                            nwk = line.rstrip().split('= ')[1]
+                            parasite_tree = tree_from_newick(nwk, '!P')
                     if line[0] not in ('#', '['):
+                        if not parasite_tree:
+                            self.sig.emit(f'Error: The symbiont tree is not found in the file.')
+                            break
                         events, hosts = {}, {}
                         try:
                             for u in line.rstrip().split(', '):
@@ -555,16 +560,13 @@ class DotFileThread(qt.QtCore.QThread):
                             self.sig.emit(f'Error: The file format is not recognized '
                                           f'(Not event partitions or equivalence classes?).')
                             break
-                        if not parasite_tree:
-                            self.sig.emit(f'Error: The parasite tree is not found in the file.')
-                            break
                         self.write_colored_tree(parasite_tree, events, hosts)
                     line = f.readline()
             else:  # host tree or parasite tree
                 tree = None
-                line = f.readline()
+                line = f.readline().lower()
                 while line:
-                    if ('host tree' if self.task == 0 else 'parasite tree') in line.lower():
+                    if self.task == 0 and 'host tree' in line or ('parasite tree' in line or 'symbiont tree' in line):
                         nwk = line.rstrip().split('= ')[1]
                         tree = tree_from_newick(nwk, '!H' if self.task == 0 else '!P')
                         break
@@ -572,7 +574,7 @@ class DotFileThread(qt.QtCore.QThread):
                 if tree:
                     self.write_plain_tree(tree)
                 else:
-                    self.sig.emit(f'The {"host" if self.task == 0 else "parasite"} tree is not found in the file.')
+                    self.sig.emit(f'The {"host" if self.task == 0 else "symbiont"} tree is not found in the file.')
         self.sig.emit('')
         self.exit(0)
 
