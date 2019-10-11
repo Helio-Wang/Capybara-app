@@ -354,6 +354,8 @@ class MainAppWindow(qtw.QWidget):
         super().__init__()
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
+        self.setWindowTitle('Quokka')
+        self.setWindowIcon(qt.QtGui.QIcon('logopic.png'))
 
         self.create_widgets()
         self.set_layout()
@@ -766,6 +768,7 @@ class ConvertWindow(MainAppWindow):
 class WelcomeWindow(qtw.QDialog):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle('TRESSE')
         self.setMinimumWidth(500)
         self.setMinimumHeight(300)
         vlayout = qtw.QVBoxLayout()

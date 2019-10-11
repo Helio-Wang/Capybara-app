@@ -34,7 +34,7 @@ def root_update(current, base_nodes, position):
 
 
 def signature_update_event_partition(table, node):
-    signature = (node.event, None)
+    signature = (node.event, node.association if node.event == NestedSolution.LEAF else None)
     if signature not in table:
         table[signature] = {node}
     else:
@@ -42,7 +42,7 @@ def signature_update_event_partition(table, node):
 
 
 def signature_update_strong_class(table, node):
-    signature = (node.event, None) if node.event == NestedSolution.HOST_SWITCH else (node.event, node.association)
+    signature = (node.event, None if node.event == NestedSolution.HOST_SWITCH else node.association)
     if signature not in table:
         table[signature] = {node}
     else:

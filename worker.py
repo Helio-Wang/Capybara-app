@@ -546,8 +546,7 @@ class DotFileThread(qt.QtCore.QThread):
                 line = f.readline()
                 while line:
                     if not parasite_tree:
-                        line = line.lower()
-                        if 'symbiont tree' in line:
+                        if 'symbiont tree' in line.lower():
                             nwk = line.rstrip().split('= ')[1]
                             parasite_tree = tree_from_newick(nwk, '!P')
                     if line[0] not in ('#', '['):
@@ -568,9 +567,9 @@ class DotFileThread(qt.QtCore.QThread):
                     line = f.readline()
             else:  # host tree or parasite tree
                 tree = None
-                line = f.readline().lower()
+                line = f.readline()
                 while line:
-                    if (self.task == 0 and 'host tree' in line) or 'symbiont tree' in line:
+                    if (self.task == 0 and 'host tree' in line.lower()) or 'symbiont tree' in line.lower():
                         nwk = line.rstrip().split('= ')[1]
                         tree = tree_from_newick(nwk, '!H' if self.task == 0 else '!P')
                         break
