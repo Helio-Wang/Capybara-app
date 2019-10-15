@@ -106,39 +106,24 @@ class ClassEnumerator:
 
         base_nodes = current.nodes.copy()
 
-        for left_signature, left_nodes in self.f_left(current):
+        for left_signature, left_nodes in self.f_side(current, 0):
             current.left_child.mark(left_signature, left_nodes)
 
             for left in self.f(current.left_child):
                 root_update(current, base_nodes, 0)
 
                 second_base_nodes = current.nodes.copy()
-                for right_signature, right_nodes in self.f_right(current):
+                for right_signature, right_nodes in self.f_side(current, 1):
                     current.right_child.mark(right_signature, right_nodes)
 
                     for right in self.f(current.right_child):
                         root_update(current, second_base_nodes, 1)
                         yield current
 
-    def f_left(self, current):
-        left_nodes = {}
+    def f_side(self, current, position):
+        all_nodes = {}
         for parent_node in current.nodes:
-            for node in get_grandchildren(parent_node, 0):
-                self.signature_update(left_nodes, node)
-        return left_nodes.items()
-
-    def f_right(self, current):
-        right_nodes = {}
-        sister_nodes = current.left_child.nodes
-        for parent_node in current.nodes:
-            to_add = False
-            for sister_node in sister_nodes:
-                if sister_node in get_grandchildren(parent_node, 0):
-                    to_add = True
-                    break
-            if to_add:
-                for node in get_grandchildren(parent_node, 1):
-                    self.signature_update(right_nodes, node)
-        return right_nodes.items()
-
+            for node in get_grandchildren(parent_node, position):
+                self.signature_update(all_nodes, node)
+        return all_nodes.items()
 
