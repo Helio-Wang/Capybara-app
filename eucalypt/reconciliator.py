@@ -1,4 +1,4 @@
-from eucalypt.solution import Association, NestedSolution, SolutionGenerator, SolutionGeneratorCounter, BestKSolutionGenerator
+from eucalypt.solution import Association, NestedSolution, SolutionGenerator, BestKSolutionGenerator
 from equivalence.event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
 
 
@@ -109,7 +109,7 @@ class Reconciliator:
         return self.finishing_up()
 
     def finishing_up(self):
-        parasite_root_row = self.main_matrix[len(self.main_matrix)-1]
+        parasite_root_row = self.main_matrix[self.parasite_tree.root.index]
         optimal_solutions = self.solution_generator.best_solution(parasite_root_row)
         return optimal_solutions
 
@@ -222,7 +222,7 @@ class ReconciliatorCounter(Reconciliator):
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
         if task == 0:
-            self.solution_generator = SolutionGeneratorCounter()
+            self.solution_generator = SolutionGenerator(True)
         elif task == 1:
             self.solution_generator = SolutionGeneratorEventVectorCounter()
         else:
@@ -239,7 +239,7 @@ class ReconciliatorEnumerator(Reconciliator):
         if task == 1:
             self.solution_generator = SolutionGeneratorEventVector()
         elif task == 0 and maximum == float('Inf'):
-            self.solution_generator = SolutionGeneratorCounter()
+            self.solution_generator = SolutionGenerator(True)
         else:
             self.solution_generator = SolutionGenerator(False)
         self.init_matrices()

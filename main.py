@@ -106,6 +106,7 @@ class OutputProgressDialog(qtw.QProgressDialog):
         self.setValue(value)
         if value == 100:
             self.setCancelButtonText('OK')
+            self.thread.wait()
             self.close()
 
     def connectToThread(self, thread):
@@ -175,12 +176,12 @@ class EnumerateDialog(qtw.QDialog):
             groupBox3 = qtw.QGroupBox('Output type ')
             vlayout3 = qtw.QVBoxLayout()
             onlyButton = qtw.QRadioButton('Output the labels only')
-            onlyButton.setToolTip(f'<b></b>When checked, in a solution each node receives a label '
+            onlyButton.setToolTip(f'<b></b>When checked, in a solution each symbiont node receives a label '
                                   f'({"event" if task == 2 else "event and a host name if available"}). The output'
-                                  f' will not be compatible with CophyTree Viewer.')
+                                  f' can be visualized in Quokka Viewer.')
             onlyButton.setChecked(True)
             bothButton = qtw.QRadioButton('Output one reconciliation (much slower)')
-            bothButton.setToolTip('<b></b>When checked, in a solution each node receives a host name.')
+            bothButton.setToolTip('<b></b>When checked, in a solution each symbiont node receives a host name.')
             onlyButton.toggled.connect(self.check_label_output)
             vlayout3.addWidget(onlyButton)
             vlayout3.addWidget(bothButton)
@@ -741,7 +742,7 @@ class ConvertWindow(MainAppWindow):
     def open_event(self):
         if self.has_output and self.unsaved:
             msg = qtw.QMessageBox.warning(self, 'Confirm new input',
-                                          'The current output will be lost if not saved or copied.\n'
+                                          'The current output will be lost if not saved.\n'
                                           'Do you want to continue?',
                                           qtw.QMessageBox.Ok | qtw.QMessageBox.Cancel, qtw.QMessageBox.Ok)
             if msg == qtw.QMessageBox.Cancel:

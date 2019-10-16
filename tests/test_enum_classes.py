@@ -2,7 +2,7 @@ import unittest
 from .test_worker import TestWorker
 
 
-class CountClassesTestCase(unittest.TestCase):
+class EnumClassesTestCase(unittest.TestCase):
     def test_SFC_m111(self):
         worker = TestWorker('tests/datasets/SFC.nex', -1, 1, 1, 1, task=3, enum=True)
         self.assertEqual(worker.get_answer(), 3)

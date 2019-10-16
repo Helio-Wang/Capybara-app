@@ -34,7 +34,7 @@ def root_update(current, base_nodes, position):
 
 
 def signature_update_event_partition(table, node):
-    signature = (node.event, node.association if node.event == NestedSolution.LEAF else None)
+    signature = (node.event, node.association.host if node.event == NestedSolution.LEAF else None)
     if signature not in table:
         table[signature] = {node}
     else:
@@ -42,7 +42,7 @@ def signature_update_event_partition(table, node):
 
 
 def signature_update_strong_class(table, node):
-    signature = (node.event, None if node.event == NestedSolution.HOST_SWITCH else node.association)
+    signature = (node.event, None if node.event == NestedSolution.HOST_SWITCH else node.association.host)
     if signature not in table:
         table[signature] = {node}
     else:
@@ -72,8 +72,8 @@ class EnumTree:
     def traverse(self):
         mapping, events = {}, {}
         for p, ep in self.tree.items():
-            event, association = ep.signature
-            mapping[p] = None if not association else association.host
+            event, host = ep.signature
+            mapping[p] = host
             events[p] = event
         return mapping, events
 

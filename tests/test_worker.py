@@ -37,4 +37,3 @@ class TestWorker:
             root = cla.fill_class_matrix(self.parasite_tree, self.host_tree, self.leaf_map, reachable, self.task)
             return root.num_subsolutions
 
-

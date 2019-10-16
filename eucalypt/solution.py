@@ -24,7 +24,7 @@ class NestedSolution:
     SIMPLE, MULTIPLE, FINAL = 0, 1, 2
     COSPECIATION, DUPLICATION, HOST_SWITCH, LEAF = 0, 1, 2, 4
 
-    def __init__(self, cost, association, composition_type, event, accumulate, children):
+    def __init__(self, cost, association, composition_type, event, accumulate, children, num_subsolutions=1):
         self.cost = cost
         self.association = association
         self.composition_type = composition_type
@@ -36,8 +36,8 @@ class NestedSolution:
 
         self.children = children
 
-        self.num_subsolutions = 1
-        if accumulate:
+        self.num_subsolutions = num_subsolutions
+        if accumulate and num_subsolutions == 1:  # recompute
             if self.composition_type == NestedSolution.SIMPLE:
                 self.num_subsolutions = self.children[0].num_subsolutions * self.children[1].num_subsolutions
             elif self.composition_type == NestedSolution.MULTIPLE:
@@ -76,7 +76,7 @@ class SolutionGenerator:
         # something which was REALLY REALLY BADLY WRITTEN in the original code
         return NestedSolution(solution.cost + loss_cost, solution.association,
                               solution.composition_type, solution.event, self.accumulate,
-                              solution.children)
+                              solution.children, solution.num_subsolutions)
 
     def best_solution(self, solutions):
         """select the solutions with minimum cost"""
@@ -98,19 +98,6 @@ class SolutionGenerator:
             else:
                 children.append(solution)
         return NestedSolution(first.cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children)
-
-
-class SolutionGeneratorCounter(SolutionGenerator):
-    """
-    Faster counting, without flattening, cannot be used as base for enumeration
-    """
-    def __init__(self):
-        super().__init__(True)
-
-    def merge(self, first, second):
-        if first.cost == float('Inf'):
-            return self.empty_solution()
-        return NestedSolution(first.cost, None, NestedSolution.MULTIPLE, None, self.accumulate, [first, second])
 
 
 class BestKSolutionGenerator(SolutionGenerator):
@@ -216,17 +203,7 @@ class BestKSolutionGenerator(SolutionGenerator):
         return NestedSolution(children[0].cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children)
 
     def add_loss(self, loss_cost, solution):
-        if solution.composition_type == NestedSolution.MULTIPLE:
-            new_children = []
-            for child in solution.children:
-                new_children.append(NestedSolution(child.cost + loss_cost, child.association,
-                                                   child.composition_type, child.event, self.accumulate,
-                                                   child.children))
-            return NestedSolution(new_children[0].cost, None, NestedSolution.MULTIPLE,
-                                  None, self.accumulate, new_children)
-        else:
-            return NestedSolution(solution.cost + loss_cost, solution.association,
-                                  solution.composition_type, solution.event, self.accumulate,
-                                  solution.children)
-
+        return NestedSolution(solution.cost + loss_cost, solution.association,
+                              solution.composition_type, solution.event, self.accumulate,
+                              solution.children, solution.num_subsolutions)
 
