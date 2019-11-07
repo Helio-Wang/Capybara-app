@@ -1,3 +1,13 @@
+### Documentation
+
+https://quokka-cophy.readthedocs.io/en/latest/index.html
+
+
+### License
+
+CeCILL 2.1 (GPL compatible)
+
+
 ### Build
 
 ```
