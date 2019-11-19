@@ -253,10 +253,6 @@ class CostVectorBox(qtw.QGroupBox):
         self.setLayout(glayout)
 
         self.cost_vector = [-1, 1, 1, 1]
-        self.cospBox.editingFinished.connect(lambda: self.validate(0, self.cospBox))
-        self.dupBox.editingFinished.connect(lambda: self.validate(1, self.dupBox))
-        self.switchBox.editingFinished.connect(lambda: self.validate(2, self.switchBox))
-        self.lossBox.editingFinished.connect(lambda: self.validate(3, self.lossBox))
 
     def reset(self):
         self.cospBox.setText('-1')
@@ -265,20 +261,19 @@ class CostVectorBox(qtw.QGroupBox):
         self.lossBox.setText('1')
     
     def validate_all(self):
-        return self.validate(0, self.cospBox) \
-               and self.validate(1, self.dupBox) \
-               and self.validate(2, self.switchBox) \
-               and self.validate(3, self.lossBox)
+        if self.validate(0, self.cospBox):
+            if self.validate(1, self.dupBox):
+                if self.validate(2, self.switchBox):
+                    if self.validate(3, self.lossBox):
+                        return True
+        return False
 
     def validate(self, index, box):
         try:
             self.cost_vector[index] = int(box.text())
         except ValueError:
             qtw.QMessageBox.critical(self, 'Error', 'Cost must be a number!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
-            if index == 0:
-                box.setText('-1')
-            else:   
-                box.setText('1')
+            self.reset()
             return False
         return True
             
