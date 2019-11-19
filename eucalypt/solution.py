@@ -203,7 +203,18 @@ class BestKSolutionGenerator(SolutionGenerator):
         return NestedSolution(children[0].cost, None, NestedSolution.MULTIPLE, None, self.accumulate, children)
 
     def add_loss(self, loss_cost, solution):
-        return NestedSolution(solution.cost + loss_cost, solution.association,
-                              solution.composition_type, solution.event, self.accumulate,
-                              solution.children, solution.num_subsolutions)
+        if solution.composition_type == NestedSolution.MULTIPLE:
+            new_children = []
+            for child in solution.children:
+                new_children.append(NestedSolution(child.cost + loss_cost, child.association,
+                                                   child.composition_type, child.event, self.accumulate,
+                                                   child.children))
+            return NestedSolution(new_children[0].cost, None, NestedSolution.MULTIPLE,
+                                  None, self.accumulate, new_children)
+        else:
+            return NestedSolution(solution.cost + loss_cost, solution.association,
+                                  solution.composition_type, solution.event, self.accumulate,
+                                  solution.children)
+
+
 

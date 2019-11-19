@@ -25,7 +25,7 @@ class WorkerData:
                                                    cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
                                                    self.threshold, task)
         root = recon.run()
-        opt_cost = root.cost / self.multiplier
+        opt_cost = root.cost // self.multiplier
 
         if task in (2, 3):
             reachable = cla.fill_reachable_matrix(self.parasite_tree, self.host_tree, root)
@@ -38,7 +38,7 @@ class WorkerData:
                                                       cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
                                                       self.threshold, task, maximum)
         root = recon.run()
-        opt_cost = root.cost / self.multiplier
+        opt_cost = root.cost // self.multiplier
         return opt_cost, root
 
     def enumerate_best_k(self, cost_vector, k):
@@ -48,7 +48,7 @@ class WorkerData:
                                                            cost_vector[2] * self.multiplier,
                                                            cost_vector[3] * self.multiplier, self.threshold, k)
         root = recon.run()
-        return root.cost / self.multiplier, recon.cost_summary, root
+        return root.cost // self.multiplier, recon.cost_summary, root
 
 
 class CountThread(qt.QtCore.QThread):
@@ -386,7 +386,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.num_acyclic, self.num_solutions = 0, 0
         self.writer = open(self.filename, 'w')
 
-    def write_header(self, opt_cost, cost_summary):
+    def write_header(self, opt_cost):
         self.writer.write('#--------------------\n')
         self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
         self.writer.write('#Symbiont tree      = {}\n'.format(self.data.parasite_tree))
@@ -396,17 +396,15 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                                                                                 self.data.leaf_map.items()))))
         self.writer.write('#--------------------\n')
         if self.acyclic_only:
-            self.writer.write('Enumerate acyclic solutions among the best K solutions\n')
+            self.writer.write('#Task: Enumerate acyclic solutions among the best K solutions\n')
         else:
-            self.writer.write('Enumerate the best K solutions\n')
+            self.writer.write('#Task: Enumerate the best K solutions\n')
         self.writer.write('#Co-speciation cost = {}\n'.format(self.cost_vector[0]))
         self.writer.write('#Duplication cost   = {}\n'.format(self.cost_vector[1]))
         self.writer.write('#Host-switch cost   = {}\n'.format(self.cost_vector[2]))
         self.writer.write('#Loss cost          = {}\n'.format(self.cost_vector[3]))
         self.writer.write('#K                  = {}\n'.format(self.k))
         self.writer.write('#Optimal cost       = {}\n'.format(opt_cost))
-        for cost in sorted(cost_summary.keys()):
-            self.writer.write(f'#Number of solutions having cost {cost / self.data.multiplier} = {cost_summary[cost]}')
         self.writer.write('#--------------------\n')
 
     def run(self, label=''):
@@ -423,23 +421,22 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig2.emit(1)
         opt_cost, cost_summary, root = self.data.enumerate_best_k(self.cost_vector, self.k)
         try:
-            self.write_header(opt_cost, cost_summary)
+            self.write_header(opt_cost)
             self.sig2.emit(5)
             self.sig.emit('------')
             self.root = root
-            self.loop_enumerate()
+            acyclic_summary = self.loop_enumerate(cost_summary)
             self.writer.write('#--------------------\n')
-            if self.acyclic_only:
-                self.sig.emit(f'Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}')
-                self.writer.write(f'#Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}\n')
-            else:
-                self.sig.emit(f'Number of output solutions = {self.num_acyclic}')
-                self.writer.write(f'#Number of output solutions = {self.num_acyclic}\n')
+            self.sig.emit(f'Number of output solutions = {self.num_acyclic}{f" out of {self.num_solutions}" if self.acyclic_only else ""}')
+            for cost in sorted(cost_summary.keys()):
+                self.writer.write(f'#Number of solutions having cost {cost // self.data.multiplier} = {cost_summary[cost]}'
+                                  f'{f" (acyclic = {acyclic_summary[cost]})" if self.acyclic_only else ""}\n')
         except ValueError:
             return
         self.sig.emit('Optimal cost = {}'.format(opt_cost))
         for cost in sorted(cost_summary.keys()):
-            self.sig.emit(f'Number of solutions having cost {cost / self.data.multiplier} = {cost_summary[cost]}')
+            self.sig.emit(f'Number of solutions having cost {cost // self.data.multiplier} = {cost_summary[cost]}' 
+                          f'{f" (acyclic = {acyclic_summary[cost]})" if self.acyclic_only else ""}')
         self.sig.emit('Output written to {}'.format(self.filename))
         self.sig.emit('------')
         self.sig.emit(f'Job finished at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
@@ -458,8 +455,9 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.writer.close()
         self.exit(1)
 
-    def loop_enumerate(self):
+    def loop_enumerate(self, cost_summary):
         percentage = 5
+        acyclic_summary = {cost: 0 for cost in cost_summary}
         while True:
             self.current_mapping = {}
             self.current_text = []
@@ -467,7 +465,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
 
             self.num_solutions += 1
             current_cell = self.root
-            iterator = enumerator.SolutionIterator(self.root)
+            iterator = enumerator.SolutionIterator(self.root, get_cost=True)
             while not iterator.done():
                 current_cell = self.get_next(current_cell, iterator)
             self.clean_stack()
@@ -482,9 +480,10 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                     is_acyclic = cyclicity.is_acyclic_stolzer(self.current_mapping, transfer_edges)
 
             if not self.acyclic_only or is_acyclic:
+                acyclic_summary[iterator.final_cost] += 1
                 self.num_acyclic += 1
                 self.writer.write(', '.join(self.current_text))
-                self.writer.write(f'\n[{self.num_acyclic}]\n')
+                self.writer.write(f'\n[{self.num_acyclic}, cost = {iterator.final_cost // self.data.multiplier}]\n')
 
             if not self.merge_stack:
                 break
@@ -493,6 +492,7 @@ class BestKEnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
                 percentage = new_percentage
                 self.sig2.emit(int(percentage))
         self.sig2.emit(100)
+        return acyclic_summary
 
 
 class DotFileThread(qt.QtCore.QThread):

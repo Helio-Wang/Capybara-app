@@ -3,14 +3,18 @@ from eucalypt import cyclicity
 
 
 class SolutionIterator:
-    def __init__(self, root):
+    def __init__(self, root, get_cost=False):
         self.stack = [root]
+        self.get_cost = get_cost
         self.final_cost = None
 
     def done(self):
         return not self.stack
 
     def get_next(self):
+        if self.get_cost and self.final_cost is None:
+            if self.stack[-1].composition_type != NestedSolution.MULTIPLE:
+                self.final_cost = self.stack[-1].cost
         self.move_to_next()
         if self.done():
             return None
