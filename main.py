@@ -263,6 +263,12 @@ class CostVectorBox(qtw.QGroupBox):
         self.dupBox.setText('1')
         self.switchBox.setText('1')
         self.lossBox.setText('1')
+    
+    def validate_all(self):
+        return self.validate(0, self.cospBox) \
+               and self.validate(1, self.dupBox) \
+               and self.validate(2, self.switchBox) \
+               and self.validate(3, self.lossBox)
 
     def validate(self, index, box):
         try:
@@ -273,6 +279,8 @@ class CostVectorBox(qtw.QGroupBox):
                 box.setText('-1')
             else:   
                 box.setText('1')
+            return False
+        return True
             
 
 class TaskBox(qtw.QGroupBox):
@@ -497,6 +505,8 @@ class MainAppWindow(qtw.QWidget):
             self.out_thread()
 
     def count_event(self):
+        if not self.costVectorBox.validate_all():
+            return
         if not self.taskBox.tasks:
             qtw.QMessageBox.critical(self, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.taskBox.last_check.setChecked(True)
@@ -506,6 +516,8 @@ class MainAppWindow(qtw.QWidget):
         self.in_thread()
 
     def enumerate_event(self):
+        if not self.costVectorBox.validate_all():
+            return
         if not self.taskBox.tasks:
             qtw.QMessageBox.critical(self, 'Error', 'Choose at least one task!', qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             self.taskBox.last_check.setChecked(True)
