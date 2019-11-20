@@ -1,6 +1,9 @@
 #  Quokka
 eQUivalence Klasses enumerator fOr Kophylogeny Associations
 
+## Download
+
+https://github.com/Helio-Wang/Quokka-app/releases/tag/v1.0
 
 ## Documentation
 
