@@ -673,6 +673,8 @@ class SuboptWindow(MainAppWindow):
         self.acyclic_only = checked
 
     def enumerate_event(self):
+        if not self.costVectorBox.validate_all():
+            return
         if not self.validate_limit():
             return
         success, filename = save_dialog('output.txt', '.txt')
