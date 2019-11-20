@@ -3,7 +3,8 @@ eQUivalence Klasses enumerator fOr Kophylogeny Associations
 
 ## Download
 
-https://github.com/Helio-Wang/Quokka-app/releases/tag/v1.0
+https://github.com/Helio-Wang/Quokka-app/releases/latest
+
 
 ## Documentation
 
