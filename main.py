@@ -777,7 +777,7 @@ class ConvertWindow(MainAppWindow):
 class WelcomeWindow(qtw.QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Quokka')
+        self.setWindowTitle('Capybara')
         self.setMinimumWidth(500)
         self.setMinimumHeight(300)
         vlayout = qtw.QVBoxLayout()
