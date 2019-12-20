@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['/home/helio/Development/apps/quokka-app'],
+             pathex=['/home/helio/Development/apps/capybara-app'],
              binaries=[],
              datas=[],
              hiddenimports=[],

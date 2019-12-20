@@ -127,3 +127,4 @@ class ClassEnumerator:
                 self.signature_update(all_nodes, node)
         return all_nodes.items()
 
+

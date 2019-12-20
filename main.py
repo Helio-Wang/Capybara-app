@@ -178,7 +178,7 @@ class EnumerateDialog(qtw.QDialog):
             onlyButton = qtw.QRadioButton('Output the labels only')
             onlyButton.setToolTip(f'<b></b>When checked, in a solution each symbiont node receives a label '
                                   f'({"event" if task == 2 else "event and a host name if available"}). The output'
-                                  f' can be visualized in Quokka Viewer.')
+                                  f' can be visualized in Capybara Viewer.')
             onlyButton.setChecked(True)
             bothButton = qtw.QRadioButton('Output one reconciliation (much slower)')
             bothButton.setToolTip('<b></b>When checked, in a solution each symbiont node receives a host name.')
@@ -358,7 +358,7 @@ class MainAppWindow(qtw.QWidget):
         super().__init__()
         self.setMinimumWidth(800)
         self.setMinimumHeight(600)
-        self.setWindowTitle('Quokka')
+        self.setWindowTitle('Capybara')
 
         self.create_widgets()
         self.set_layout()

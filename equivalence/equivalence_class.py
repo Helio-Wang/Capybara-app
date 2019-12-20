@@ -54,6 +54,9 @@ class NestedClass(NestedSolution):
 
 
 class NestedClassWrapper:
+    """
+    the wrapper class is used to get a custom hashing and comparison of AND gates under equivalence (SIMPLE type)
+    """
     def __init__(self, solution):
         self.solution = solution
         self._hash = None
@@ -70,6 +73,7 @@ class NestedClassWrapper:
         return hash(self) == hash(other)
 
     def __hash__(self):
+        # not a perfect hash
         if self._hash is not None:
             return self._hash
         if self.solution.composition_type == NestedSolution.MULTIPLE:
