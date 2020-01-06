@@ -92,10 +92,10 @@ class EnumEventPartitionsTestCase(unittest.TestCase):
         self.assertEqual(worker.get_answer(), 1152)
 
     # def test_wolb_m111(self):
-    #     worker = TestWorker('tests/datasets/Wolbacchia.nex', -1, 1, 1, 1, task=2, enum=True)
+    #     worker = TestWorker('tests/datasets/Wolbachia.nex', -1, 1, 1, 1, task=2, enum=True)
     #     self.assertEqual(worker.get_answer(), 4080)
     #
     # def test_wolb_0111(self):
-    #     worker = TestWorker('tests/datasets/Wolbacchia.nex', 0, 1, 1, 1, task=2, enum=True)
+    #     worker = TestWorker('tests/datasets/Wolbachia.nex', 0, 1, 1, 1, task=2, enum=True)
     #     self.assertEqual(worker.get_answer(), 40960)
 

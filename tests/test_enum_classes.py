@@ -76,10 +76,10 @@ class EnumClassesTestCase(unittest.TestCase):
         self.assertEqual(worker.get_answer(), 10)
 
     # def test_wolb_m111(self):
-    #     worker = TestWorker('tests/datasets/Wolbacchia.nex', -1, 1, 1, 1, task=3, enum=True)
+    #     worker = TestWorker('tests/datasets/Wolbachia.nex', -1, 1, 1, 1, task=3, enum=True)
     #     self.assertEqual(worker.get_answer(), 24192)
     #
     # def test_wolb_0111(self):
-    #     worker = TestWorker('tests/datasets/Wolbacchia.nex', 0, 1, 1, 1, task=3, enum=True)
+    #     worker = TestWorker('tests/datasets/Wolbachia.nex', 0, 1, 1, 1, task=3, enum=True)
     #     self.assertEqual(worker.get_answer(), 76800)
 
