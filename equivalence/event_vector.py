@@ -2,6 +2,9 @@ from eucalypt.solution import NestedSolution, SolutionGenerator
 
 
 class EventVector:
+    """
+    A tuple of four integers which can also count the number of subsolutions
+    """
     def __init__(self, vector, num_subsolutions=1):
         self.vector = vector
         self.num_subsolutions = num_subsolutions
@@ -38,6 +41,9 @@ class EventVector:
 
 
 class NestedSolutionEventVector(NestedSolution):
+    """
+    NestedSolution that also remembers a set of event vectors
+    """
     def __init__(self, cost, association, composition_type, event, accumulate, children,
                  event_vectors, num_losses=0):
         super().__init__(cost, association, composition_type, event, accumulate, children)

@@ -253,7 +253,7 @@ class ReconciliatorBestKEnumerator(Reconciliator):
 
         self.solution_generator = BestKSolutionGenerator(k)
         self.init_matrices()
-        self.cost_summary = {}
+        self.cost_summary = {}  # the number of solutions for each cost value
 
     def run(self):
         self.fill_matrices()

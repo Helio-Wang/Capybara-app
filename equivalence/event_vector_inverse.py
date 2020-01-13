@@ -4,6 +4,9 @@ from eucalypt.enumerator import SolutionsEnumerator
 
 
 class VectorEnumerator:
+    """
+    Given the event vector, a reconciliation can be found by backtracking (not used in the app)
+    """
     def __init__(self, root, writer, config):
         self.root = root
         self.writer = writer
@@ -52,6 +55,9 @@ class VectorEnumerator:
 
 
 class VectorEnumeratorAll:
+    """
+    Build a DAG containing all reconciliations with a given event vector (not used in the app)
+    """
     def __init__(self, root, writer, config):
         self.root = root
         self.writer = writer
@@ -63,7 +69,8 @@ class VectorEnumeratorAll:
             for child in solution.children:
                 if target_vector in child.event_vectors:
                     new_children.append(self.visit(child, target_vector))
-            return NestedSolutionEventVector(0, None, NestedSolution.MULTIPLE, None, False, new_children, solution.event_vectors)
+            return NestedSolutionEventVector(0, None, NestedSolution.MULTIPLE, None, False,
+                                             new_children, solution.event_vectors)
         elif solution.composition_type == NestedSolution.FINAL:
             return solution
         else:
@@ -76,7 +83,8 @@ class VectorEnumeratorAll:
                         second = self.visit(solution.children[1], right_vector)
                         new_children.append(NestedSolutionEventVector(0, solution.association, NestedSolution.SIMPLE,
                                             solution.event, False, [first, second], solution.event_vectors))
-            return NestedSolutionEventVector(0, None, NestedSolution.MULTIPLE, None, False, new_children, solution.event_vectors)
+            return NestedSolutionEventVector(0, None, NestedSolution.MULTIPLE, None, False,
+                                             new_children, solution.event_vectors)
 
     def run(self):
         num_class = 0
