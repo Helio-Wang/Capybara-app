@@ -91,11 +91,11 @@ class CountEventPartitionsTestCase(unittest.TestCase):
         worker = TestWorker('tests/datasets/COG2085.nex', 0, 1, 1, 0, task=2)
         self.assertEqual(worker.get_answer(), 1152)
 
-    # def test_wolb_m111(self):
-    #     worker = TestWorker('tests/datasets/Wolbachia.nex', -1, 1, 1, 1, task=2)
-    #     self.assertEqual(worker.get_answer(), 4080)
-    #
-    # def test_wolb_0111(self):
-    #     worker = TestWorker('tests/datasets/Wolbachia.nex', 0, 1, 1, 1, task=2)
-    #     self.assertEqual(worker.get_answer(), 40960)
+    def test_wolb_m111(self):
+        worker = TestWorker('tests/datasets/Wolbachia.nex', -1, 1, 1, 1, task=2)
+        self.assertEqual(worker.get_answer(), 4080)
+
+    def test_wolb_0111(self):
+        worker = TestWorker('tests/datasets/Wolbachia.nex', 0, 1, 1, 1, task=2)
+        self.assertEqual(worker.get_answer(), 40960)
 

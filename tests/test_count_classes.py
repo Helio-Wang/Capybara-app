@@ -75,11 +75,11 @@ class CountClassesTestCase(unittest.TestCase):
         worker = TestWorker('tests/datasets/COG2085.nex', 0, 2, 3, 1, task=3)
         self.assertEqual(worker.get_answer(), 10)
 
-    # def test_wolb_m111(self):
-    #     worker = TestWorker('tests/datasets/Wolbachia.nex', -1, 1, 1, 1, task=3)
-    #     self.assertEqual(worker.get_answer(), 24192)
-    #
-    # def test_wolb_0111(self):
-    #     worker = TestWorker('tests/datasets/Wolbachia.nex', 0, 1, 1, 1, task=3)
-    #     self.assertEqual(worker.get_answer(), 76800)
+    def test_wolb_m111(self):
+        worker = TestWorker('tests/datasets/Wolbachia.nex', -1, 1, 1, 1, task=3)
+        self.assertEqual(worker.get_answer(), 24192)
+
+    def test_wolb_0111(self):
+        worker = TestWorker('tests/datasets/Wolbachia.nex', 0, 1, 1, 1, task=3)
+        self.assertEqual(worker.get_answer(), 76800)
 
