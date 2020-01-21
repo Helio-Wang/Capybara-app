@@ -52,6 +52,7 @@ pipenv run python main.py
 
 Alternatively, you can build and run the binary:
 ```
+pipenv install -d
 pipenv run python -OO -m PyInstaller main.py -F
 dist/./main
 ```
