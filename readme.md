@@ -7,11 +7,15 @@ https://github.com/Helio-Wang/Capybara-app/releases/latest
 You can find the binary executables of Capybara for the following OS:
 - Microsoft Windows 10
 - macOs
-- Ubuntu (>=17.04)
-- Arch Linux
+- Linux (Ubuntu, Fedora, Arch Linux, Manjaro, etc.)
 
-Please note that no additional installation is required.
+Please note that no additional installation is required. Just unzip and double-click!
 
+
+For some Linux versions: you might need to manually make the file executable in a terminal
+```
+chmod +x Capybara
+```
 
 ## Documentation
 
@@ -26,7 +30,7 @@ CeCILL 2.1 (GPL compatible)
 ## Build
 
 You may want to build Capybara from source if
-- You are not using one of the supported OS (Windows, macOS, Ubuntu, Arch), or
+- You are not using one of the supported OS (Windows, macOS, major flavors of Linux), or
 - You have made some changes to the source code.
 
 
@@ -50,12 +54,14 @@ Then, you can execute the main script directly:
 pipenv run python main.py
 ```
 
+
 Alternatively, you can build and run the binary:
 ```
 pipenv install -d
 pipenv run python -OO -m PyInstaller main.py -F
 dist/./main
 ```
+For Windows 10 users: you also need to install pywin32-ctypes with `pipenv install pywin32-ctypes`.
 
 Note that, although Pipenv automatically scans for the targeted Python version (Python 3.6), this may not give the desired result if you have multiple implementations of Python (for instance, CPython 3.6.8 and PyPy 3.6.9). In this case, you can specify the path to the correct Python version, for example:
 ```
