@@ -1,5 +1,5 @@
 import collections
-from eucalypt import util
+from capybara.eucalypt import util
 
 
 def find_transfer_edges(host_tree, mapping, transfer_candidates):

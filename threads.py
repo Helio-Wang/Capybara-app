@@ -2,53 +2,10 @@ import datetime
 import math
 import time
 import PyQt5 as qt
-from eucalypt.solution import NestedSolution
-from eucalypt.nexparser import tree_from_newick
-from eucalypt import cyclicity, enumerator, reconciliator
-from equivalence import event_reconciliator, poly_enum_class as cenu, enumerate_classes as cla
-
-
-class WorkerData:
-    """
-    Interface between the input data and the reconciliators
-    """
-    def __init__(self, parasite_tree, host_tree, leaf_map):
-        self.parasite_tree = parasite_tree
-        self.host_tree = host_tree
-        self.leaf_map = leaf_map
-        self.multiplier = 1000
-        self.threshold = float('Inf')
-
-    def count_solutions(self, cost_vector, task):
-        recon = reconciliator.ReconciliatorCounter(self.host_tree, self.parasite_tree, self.leaf_map,
-                                                   cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
-                                                   cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
-                                                   self.threshold, task)
-        root = recon.run()
-        opt_cost = root.cost // self.multiplier
-
-        if task in (2, 3):
-            reachable = cla.fill_reachable_matrix(self.parasite_tree, self.host_tree, root)
-            root = cla.fill_class_matrix(self.parasite_tree, self.host_tree, self.leaf_map, reachable, task)
-        return opt_cost, root
-
-    def enumerate_solutions_setup(self, cost_vector, task, maximum):
-        recon = reconciliator.ReconciliatorEnumerator(self.host_tree, self.parasite_tree, self.leaf_map,
-                                                      cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
-                                                      cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier,
-                                                      self.threshold, task, maximum)
-        root = recon.run()
-        opt_cost = root.cost // self.multiplier
-        return opt_cost, root
-
-    def enumerate_best_k(self, cost_vector, k):
-        recon = reconciliator.ReconciliatorBestKEnumerator(self.host_tree, self.parasite_tree, self.leaf_map,
-                                                           cost_vector[0] * self.multiplier,
-                                                           cost_vector[1] * self.multiplier,
-                                                           cost_vector[2] * self.multiplier,
-                                                           cost_vector[3] * self.multiplier, self.threshold, k)
-        root = recon.run()
-        return root.cost // self.multiplier, recon.cost_summary, root
+from capybara.eucalypt.solution import NestedSolution
+from capybara.eucalypt.nexparser import tree_from_newick
+from capybara.eucalypt import cyclicity, enumerator
+from capybara.equivalence import event_reconciliator, poly_enum_class as cenu, enumerate_classes as cla
 
 
 class CountThread(qt.QtCore.QThread):
@@ -150,31 +107,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         else:
             self.sig.emit(f'Task {self.task+1}: Enumerate one solution per strong equivalence class...')
 
-    def write_header(self, opt_cost):
-        self.writer.write('#--------------------\n')
-        self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
-        self.writer.write('#Symbiont tree      = {}\n'.format(self.data.parasite_tree))
-        self.writer.write('#Host tree size     = {}\n'.format(self.data.host_tree.size()))
-        self.writer.write('#Symbiont tree size = {}\n'.format(self.data.parasite_tree.size()))
-        self.writer.write('#Leaf mapping       = {{{}}}\n'.format(', '.join(map(lambda x: str(x[0]) + '=' + str(x[1]),
-                                                                                self.data.leaf_map.items()))))
-        self.writer.write('#--------------------\n')
-        if self.task == 0:
-            self.writer.write(f'#Task {self.task+1}: Enumerate {"acyclic " if self.acyclic_only else ""}solutions '
-                              f'{"(cyclic or acyclic)" if not self.acyclic_only else ""}\n')
-        elif self.task == 1:
-            self.writer.write(f'#Task {self.task+1}: Enumerate one solution per event vector\n')
-        elif self.task == 2:
-            self.writer.write(f'#Task {self.task+1}: Enumerate one solution per event partition\n')
-        else:
-            self.writer.write(f'#Task {self.task+1}: Enumerate one solution per strong equivalence class\n')
-        self.writer.write('#Co-speciation cost = {}\n'.format(self.cost_vector[0]))
-        self.writer.write('#Duplication cost   = {}\n'.format(self.cost_vector[1]))
-        self.writer.write('#Host-switch cost   = {}\n'.format(self.cost_vector[2]))
-        self.writer.write('#Loss cost          = {}\n'.format(self.cost_vector[3]))
-        self.writer.write('#Optimal cost       = {}\n'.format(opt_cost))
-        self.writer.write('#--------------------\n')
-
     def run(self, label=''):
         self.sig.emit('===============')
         self.sig.emit(f'Job started at {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
@@ -185,7 +117,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig2.emit(1)
         opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, self.maximum)
         try:
-            self.write_header(opt_cost)
+            self.write_header(opt_cost, self.task, self.cost_vector)
             self.sig2.emit(5)
             self.sig.emit('------')
             self.root = root
@@ -233,30 +165,6 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         self.sig.emit('')
         self.writer.close()
         self.exit(1)
-
-    def visit_vector(self, solution, target_vector):
-        """
-        Recursive function in Event Vector Enumeration loop for extracting one solution
-        """
-        if solution.composition_type == NestedSolution.MULTIPLE:
-            for child in solution.children:
-                if target_vector in child.event_vectors:
-                    self.visit_vector(child, target_vector)
-                    return
-        elif solution.composition_type == NestedSolution.FINAL:
-            self.current_mapping[solution.association.parasite] = solution.association.host
-            self.current_text.append(str(solution.association))
-        else:
-            self.current_mapping[solution.association.parasite] = solution.association.host
-            self.current_text.append(str(solution.association))
-
-            for left_vector in solution.children[0].event_vectors:
-                for right_vector in solution.children[1].event_vectors:
-                    new_vec = left_vector.cartesian(right_vector, solution.event, solution.num_losses)
-                    if new_vec == target_vector:
-                        self.visit_vector(solution.children[0], left_vector)
-                        self.visit_vector(solution.children[1], right_vector)
-                        return
 
     def loop_vector(self):
         percentage = 5
@@ -543,7 +451,14 @@ class DotFileThread(qt.QtCore.QThread):
         with open(self.input_name, 'r') as f:
             if self.task == 2:
                 parasite_tree = None
-                line = f.readline()
+                try:
+                    line = f.readline()
+                except (UnicodeDecodeError, UnboundLocalError):
+                    self.sig.emit(f'Error: The file format is not recognized '
+                                  f'(Not event partitions or equivalence classes?).')
+                    self.sig.emit('')
+                    self.exit(0)
+                    return
                 while line:
                     if not parasite_tree:
                         if 'symbiont tree' in line.lower():
@@ -564,16 +479,35 @@ class DotFileThread(qt.QtCore.QThread):
                                           f'(Not event partitions or equivalence classes?).')
                             break
                         self.write_colored_tree(parasite_tree, events, hosts)
-                    line = f.readline()
+                    try:
+                        line = f.readline()
+                    except (UnicodeDecodeError, UnboundLocalError):
+                        self.sig.emit(f'Error: The file format is not recognized '
+                                      f'(Not event partitions or equivalence classes?).')
+                        self.sig.emit('')
+                        self.exit(0)
+                        return
             else:  # host tree or parasite tree
                 tree = None
-                line = f.readline()
+                try:
+                    line = f.readline()
+                except (UnicodeDecodeError, UnboundLocalError):
+                    self.sig.emit(f'Error: The file format is not recognized ')
+                    self.sig.emit('')
+                    self.exit(0)
+                    return
                 while line:
                     if (self.task == 0 and 'host tree' in line.lower()) or 'symbiont tree' in line.lower():
                         nwk = line.rstrip().split('= ')[1]
                         tree = tree_from_newick(nwk, '!H' if self.task == 0 else '!P')
                         break
-                    line = f.readline()
+                    try:
+                        line = f.readline()
+                    except (UnicodeDecodeError, UnboundLocalError):
+                        self.sig.emit(f'Error: The file format is not recognized ')
+                        self.sig.emit('')
+                        self.exit(0)
+                        return
                 if tree:
                     self.write_plain_tree(tree)
                 else:

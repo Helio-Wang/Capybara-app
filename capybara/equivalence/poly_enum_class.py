@@ -1,6 +1,6 @@
-from eucalypt.tree import TreeNode
-from eucalypt.util import full_flatten
-from eucalypt.solution import NestedSolution
+from capybara.eucalypt.tree import TreeNode
+from capybara.eucalypt.util import full_flatten
+from capybara.eucalypt.solution import NestedSolution
 
 
 def get_grandchildren(node, position):

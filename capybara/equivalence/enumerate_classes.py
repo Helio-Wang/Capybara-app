@@ -1,6 +1,6 @@
-from eucalypt.util import flatten, get_associations
-from eucalypt.solution import Association, NestedSolution
-from equivalence.equivalence_class import NestedClass
+from capybara.eucalypt.util import flatten, get_associations
+from capybara.eucalypt.solution import Association, NestedSolution
+from capybara.equivalence.equivalence_class import NestedClass
 
 
 def fill_reachable_matrix(parasite_tree, host_tree, optimal_solutions):

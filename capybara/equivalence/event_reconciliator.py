@@ -1,6 +1,6 @@
-from eucalypt.solution import Association, NestedSolution
-from eucalypt.reconciliator import ReconciliatorEnumerator
-from eucalypt.util import full_flatten
+from capybara.eucalypt.solution import Association, NestedSolution
+from capybara.eucalypt.reconciliator import ReconciliatorEnumerator
+from capybara.eucalypt.util import full_flatten
 
 
 class EventReconciliator(ReconciliatorEnumerator):

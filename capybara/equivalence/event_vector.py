@@ -1,4 +1,4 @@
-from eucalypt.solution import NestedSolution, SolutionGenerator
+from capybara.eucalypt.solution import NestedSolution, SolutionGenerator
 
 
 class EventVector:

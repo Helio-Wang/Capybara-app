@@ -1,4 +1,4 @@
-from eucalypt.solution import NestedSolution
+from capybara.eucalypt.solution import NestedSolution
 
 
 class UF:

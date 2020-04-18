@@ -2,8 +2,9 @@ import os
 import sys
 import PyQt5 as qt
 import PyQt5.QtWidgets as qtw
-from eucalypt import nexparser
-import worker
+from capybara.eucalypt import nexparser
+from capybara.interface import DataInterface
+import threads
 
 
 def test_open(filename):
@@ -261,12 +262,10 @@ class CostVectorBox(qtw.QGroupBox):
         self.lossBox.setText('1')
     
     def validate_all(self):
-        if self.validate(0, self.cospBox):
-            if self.validate(1, self.dupBox):
-                if self.validate(2, self.switchBox):
-                    if self.validate(3, self.lossBox):
-                        return True
-        return False
+        for i, box in enumerate([self.cospBox, self.dupBox, self.switchBox, self.lossBox]):
+            if not self.validate(i, box):
+                return False
+        return True
 
     def validate(self, index, box):
         try:
@@ -372,11 +371,11 @@ class MainAppWindow(qtw.QWidget):
         self.output_ext = '.txt'
 
     def start_thread(self):
-        self.count_thread = worker.CountThread()
+        self.count_thread = threads.CountThread()
         self.sig.connect(self.count_thread.on_source)
         self.count_thread.sig.connect(self.thread_output)
 
-        self.enum_thread = worker.EnumerateThread()
+        self.enum_thread = threads.EnumerateThread()
         self.sig2.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
 
@@ -488,7 +487,7 @@ class MainAppWindow(qtw.QWidget):
             qtw.QMessageBox.critical(self, 'Format Error', 'The file format is not supported.',
                                      qtw.QMessageBox.Ok, qtw.QMessageBox.Ok)
             return False
-        self.data = worker.WorkerData(parasite_tree, host_tree, leaf_map)
+        self.data = DataInterface(parasite_tree, host_tree, leaf_map)
         self.btnCount.setEnabled(True)
         self.btnEnumerate.setEnabled(True)
         self.btnSave.setEnabled(True)
@@ -592,7 +591,7 @@ class SuboptWindow(MainAppWindow):
         self.acyclic_only = False
 
     def start_thread(self):
-        self.enum_thread = worker.BestKEnumerateThread()
+        self.enum_thread = threads.BestKEnumerateThread()
         self.sig3.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
 
@@ -698,7 +697,7 @@ class ConvertWindow(MainAppWindow):
         self.output_ext = '.dot'
 
     def start_thread(self):
-        self.enum_thread = worker.DotFileThread()
+        self.enum_thread = threads.DotFileThread()
         self.sig4.connect(self.enum_thread.on_source)
         self.enum_thread.sig.connect(self.thread_output)
 

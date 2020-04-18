@@ -1,5 +1,5 @@
-from eucalypt.solution import NestedSolution
-from eucalypt import cyclicity
+from capybara.eucalypt.solution import NestedSolution
+from capybara.eucalypt import cyclicity
 
 
 class SolutionIterator:
@@ -58,6 +58,34 @@ class SolutionsEnumerator:
         self.current_mapping = {}
         self.current_text = []  # text for the printing the current solution
         self.transfer_candidates = []
+
+    def write_task_title(self, task):
+        if task == 0:
+            self.writer.write(f'#Task {task+1}: Enumerate {"acyclic " if self.acyclic_only else ""}solutions '
+                              f'{"(cyclic or acyclic)" if not self.acyclic_only else ""}\n')
+        elif task == 1:
+            self.writer.write(f'#Task {task+1}: Enumerate one solution per event vector\n')
+        elif task == 2:
+            self.writer.write(f'#Task {task+1}: Enumerate one solution per event partition\n')
+        else:
+            self.writer.write(f'#Task {task+1}: Enumerate one solution per strong equivalence class\n')
+
+    def write_header(self, opt_cost, task, cost_vector):
+        self.writer.write('#--------------------\n')
+        self.writer.write('#Host tree          = {}\n'.format(self.data.host_tree))
+        self.writer.write('#Symbiont tree      = {}\n'.format(self.data.parasite_tree))
+        self.writer.write('#Host tree size     = {}\n'.format(self.data.host_tree.size()))
+        self.writer.write('#Symbiont tree size = {}\n'.format(self.data.parasite_tree.size()))
+        self.writer.write('#Leaf mapping       = {{{}}}\n'.format(', '.join(map(lambda x: str(x[0]) + '=' + str(x[1]),
+                                                                                self.data.leaf_map.items()))))
+        self.writer.write('#--------------------\n')
+        self.write_task_title(task)
+        self.writer.write('#Co-speciation cost = {}\n'.format(cost_vector[0]))
+        self.writer.write('#Duplication cost   = {}\n'.format(cost_vector[1]))
+        self.writer.write('#Host-switch cost   = {}\n'.format(cost_vector[2]))
+        self.writer.write('#Loss cost          = {}\n'.format(cost_vector[3]))
+        self.writer.write('#Optimal cost       = {}\n'.format(opt_cost))
+        self.writer.write('#--------------------\n')
 
     def run(self, label=''):
         num_solutions = 0
@@ -144,4 +172,27 @@ class SolutionsEnumerator:
             child_index = self.merge_stack[self.current_index][1]
             return iterator.get_child(child_index)
 
+    def visit_vector(self, solution, target_vector):
+        """
+        Recursive function in Event Vector Enumeration loop for extracting one solution
+        """
+        if solution.composition_type == NestedSolution.MULTIPLE:
+            for child in solution.children:
+                if target_vector in child.event_vectors:
+                    self.visit_vector(child, target_vector)
+                    return
+        elif solution.composition_type == NestedSolution.FINAL:
+            self.current_mapping[solution.association.parasite] = solution.association.host
+            self.current_text.append(str(solution.association))
+        else:
+            self.current_mapping[solution.association.parasite] = solution.association.host
+            self.current_text.append(str(solution.association))
+
+            for left_vector in solution.children[0].event_vectors:
+                for right_vector in solution.children[1].event_vectors:
+                    new_vec = left_vector.cartesian(right_vector, solution.event, solution.num_losses)
+                    if new_vec == target_vector:
+                        self.visit_vector(solution.children[0], left_vector)
+                        self.visit_vector(solution.children[1], right_vector)
+                        return
 

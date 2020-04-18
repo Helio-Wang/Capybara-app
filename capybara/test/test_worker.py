@@ -1,10 +1,11 @@
-from eucalypt import nexparser, reconciliator
-from equivalence import enumerate_classes as cla, poly_enum_class as cenu
+import os
+from capybara.eucalypt import nexparser, reconciliator
+from capybara.equivalence import enumerate_classes as cla, poly_enum_class as cenu
 
 
 class TestWorker:
     def __init__(self, input_file, cosp_cost, dup_cost, switch_cost, loss_cost, task, enum=False):
-        with open(input_file, 'r') as f:
+        with open(os.path.join('datasets', input_file), 'r') as f:
             parser = nexparser.NexusParser(f)
             parser.read()
         self.host_tree = parser.host_tree

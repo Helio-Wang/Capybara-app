@@ -1,5 +1,5 @@
-from eucalypt.solution import Association, NestedSolution, SolutionGenerator, BestKSolutionGenerator
-from equivalence.event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
+from capybara.eucalypt.solution import Association, NestedSolution, SolutionGenerator, BestKSolutionGenerator
+from capybara.equivalence.event_vector import SolutionGeneratorEventVectorCounter, SolutionGeneratorEventVector
 
 
 class Reconciliator:
@@ -217,14 +217,17 @@ class Reconciliator:
 
 class ReconciliatorCounter(Reconciliator):
     def __init__(self, host_tree, parasite_tree, leaf_map,
-                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task):
+                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, cli):
 
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
         if task == 0:
             self.solution_generator = SolutionGenerator(True)
         elif task == 1:
-            self.solution_generator = SolutionGeneratorEventVectorCounter()
+            if cli:
+                self.solution_generator = SolutionGeneratorEventVector()
+            else:
+                self.solution_generator = SolutionGeneratorEventVectorCounter()
         else:
             self.solution_generator = SolutionGenerator(False)
         self.init_matrices()
@@ -232,13 +235,13 @@ class ReconciliatorCounter(Reconciliator):
 
 class ReconciliatorEnumerator(Reconciliator):
     def __init__(self, host_tree, parasite_tree, leaf_map,
-                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum):
+                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum, cli):
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
 
         if task == 1:
             self.solution_generator = SolutionGeneratorEventVector()
-        elif task == 0 and maximum == float('Inf'):
+        elif not cli and task == 0 and maximum == float('Inf'):
             self.solution_generator = SolutionGenerator(True)
         else:
             self.solution_generator = SolutionGenerator(False)

@@ -1,4 +1,4 @@
-from eucalypt.tree import TreeNode, Tree
+from capybara.eucalypt.tree import TreeNode, Tree
 
 _OPEN_BRACKET = '('
 _CLOSED_BRACKET = ')'
