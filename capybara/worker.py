@@ -36,16 +36,17 @@ class Worker:
     """
     def __init__(self, input_name, task, cost_vector, verbose):
         self.input_name = os.path.abspath(input_name)
-        self.task = task-1
+        self.task = task
         self.data = None
         self.cost_vector = cost_vector
         self.log = logging.getLogger('capybara')
         self.verbose_print = print if verbose else lambda x: None
 
     def check_options(self):
-        if self.task not in (0, 1, 2, 3):
+        if self.task not in (1, 2, 3, 4):
             self.log.error('The task is not valid.')
             return False
+        self.task -= 1
         if len(self.cost_vector) != 4:
             self.log.error('The cost vector is not valid.')
             return False
