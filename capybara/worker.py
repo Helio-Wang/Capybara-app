@@ -9,7 +9,7 @@ from capybara.equivalence import poly_enum_class as cenu
 
 logger = logging.getLogger('capybara')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-flog = logging.handlers.TimedRotatingFileHandler('capybara.log')
+flog = logging.handlers.TimedRotatingFileHandler('capybara.log', when='d', interval=2)
 flog.setFormatter(formatter)
 flog.setLevel(logging.DEBUG)
 slog = logging.StreamHandler()
@@ -95,7 +95,7 @@ class Worker:
 
 class Counter(Worker):
     """
-    Counter simply the number of solutions or classes
+    Compute the number of solutions or classes
     """
     def __init__(self, input_name, task, cost_vector, verbose):
         super().__init__(input_name, task, cost_vector, verbose)
@@ -118,6 +118,9 @@ class Counter(Worker):
 
 
 class Enumerator(Worker, enumerator.SolutionsEnumerator):
+    """
+    Enumerate solutions or classes to a file
+    """
     def __init__(self, input_name, output_name, task, cost_vector, verbose,
                  maximum, acyclic_only):
         Worker.__init__(self, input_name, task, cost_vector, verbose)
