@@ -1,3 +1,4 @@
+import os
 import signal
 import sys
 import logging
@@ -34,7 +35,7 @@ class Worker:
     Worker class for using Capybara as a package
     """
     def __init__(self, input_name, task, cost_vector, verbose):
-        self.input_name = input_name
+        self.input_name = os.path.abspath(input_name)
         self.task = task-1
         self.data = None
         self.cost_vector = cost_vector
@@ -89,7 +90,6 @@ class Worker:
         self.log.info('===== Job aborted! =====')
 
     def finish(self):
-        self.log.info('Computation done!')
         self.log.info('===== Job finished successfully! =====')
 
 
@@ -111,7 +111,7 @@ class Counter(Worker):
             answer = len(root.event_vectors)
         else:
             answer = root.num_subsolutions
-        self.log.info(f'The result of Counter task {self.task+1} is {answer}')
+        self.log.info(f'Done! The result of Counter Task {self.task+1} is {answer}')
         self.verbose_print(f'Job done! The answer is {answer}')
         self.finish()
         return answer
@@ -131,13 +131,17 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
         self.num_acyclic = 0
 
     def check_options(self):
+        # check input and cost vector
+        if not super().check_options():
+            return False
+        # check output
         try:
             self.writer = open(self.output_name, 'w')
         except PermissionError:
             self.log.error('Permission denied.')
             return False
-        if not super().check_options():
-            return False
+        self.log.info(f'Output file: {os.path.abspath(self.output_name)}')
+        # check maximum and acyclic
         if self.maximum != float('Inf'):
             try:
                 self.maximum = int(self.maximum)
@@ -190,6 +194,7 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
         except ValueError:  # aborted
             return
         self.verbose_print(f'Job done! {self.num_acyclic} solutions written to {self.output_name}')
+        self.log.info(f'Done! {self.num_acyclic} solutions written to {self.output_name}')
         self.finish()
 
     def write_task_title(self, task):
