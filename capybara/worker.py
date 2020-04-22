@@ -103,7 +103,7 @@ class Counter(Worker):
 
     def run(self):
         self.start()
-        self.log.info(f'Running Capybara Counter Task {self.task+1}')
+        self.log.info(f'Running Capybara Counter Task {self.task}')
         if not self.check_options() or not self.read_data():
             self.abort()
             return
@@ -167,7 +167,7 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
 
     def run(self, label=''):
         self.start()
-        self.log.info(f'Running Capybara Enumerator Task {self.task+1}')
+        self.log.info(f'Running Capybara Enumerator Task {self.task}')
         if not self.check_options() or not self.read_data():
             self.abort()
             return
