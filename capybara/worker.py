@@ -3,13 +3,14 @@ import signal
 import sys
 import logging
 import logging.handlers
+import uuid
 from capybara.eucalypt import nexparser, enumerator, cyclicity
 from capybara.interface import DataInterface
 from capybara.equivalence import poly_enum_class as cenu
 
 
 logger = logging.getLogger('capybara')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 flog = logging.handlers.TimedRotatingFileHandler('capybara.log', when='d', interval=2)
 flog.setFormatter(formatter)
 flog.setLevel(logging.DEBUG)
@@ -40,27 +41,28 @@ class Worker:
         self.data = None
         self.cost_vector = cost_vector
         self.log = logging.getLogger('capybara')
+        self.id = uuid.uuid1().hex
         self.verbose_print = print if verbose else lambda x: None
 
     def check_options(self):
         if self.task not in (1, 2, 3, 4):
-            self.log.error('The task is not valid.')
+            self.log.error(f'{self.id} The task is not valid.')
             return False
         self.task -= 1
         if len(self.cost_vector) != 4:
-            self.log.error('The cost vector is not valid.')
+            self.log.error(f'{self.id} The cost vector is not valid.')
             return False
         try:
             self.cost_vector = tuple(map(int, self.cost_vector))
         except (ValueError, OverflowError):
-            self.log.error('The cost vector is not valid.')
+            self.log.error(f'{self.id} The cost vector is not valid.')
             return False
-        self.log.info(f'Input file: {self.input_name}')
-        self.log.info(f'Cost vector: {self.cost_vector}')
+        self.log.info(f'{self.id} Input file: {self.input_name}')
+        self.log.info(f'{self.id} Cost vector: {self.cost_vector}')
         return True
 
     def read_data(self):
-        self.log.info(f'Reading the input file...')
+        self.log.info(f'{self.id} Reading the input file...')
         try:
             with open(self.input_name, 'r') as file:
                 parser = nexparser.NexusParser(file)
@@ -69,29 +71,29 @@ class Worker:
                 parasite_tree = parser.parasite_tree
                 leaf_map = parser.leaf_map
         except nexparser.NexusFileParserException as e:
-            self.log.error(e.message)
+            self.log.error(f'{self.id} {e.message}')
             return False
         except NotImplementedError:
-            self.log.error('The file format is not supported.')
+            self.log.error(f'{self.id} The file format is not supported.')
             return False
         except FileNotFoundError:
-            self.log.error('File not found.')
+            self.log.error(f'{self.id} File not found.')
             return False
 
         self.data = DataInterface(parasite_tree, host_tree, leaf_map)
-        self.log.info('Successful! Computing...')
+        self.log.info(f'{self.id} Successful! Computing...')
         return True
 
     def start(self):
-        self.verbose_print("Job started!")
-        self.log.info('===== Job started! =====')
+        self.verbose_print(f'{self.id} Job started!')
+        self.log.info(f'{self.id} ===== Job started! =====')
 
     def abort(self):
         print('Error! Check the file capybara.log for more details.')
-        self.log.info('===== Job aborted! =====')
+        self.log.info(f'{self.id} ===== Job aborted! =====')
 
     def finish(self):
-        self.log.info('===== Job finished successfully! =====')
+        self.log.info(f'{self.id} ===== Job finished successfully! =====')
 
 
 class Counter(Worker):
@@ -103,7 +105,7 @@ class Counter(Worker):
 
     def run(self):
         self.start()
-        self.log.info(f'Running Capybara Counter Task {self.task}')
+        self.log.info(f'{self.id} Running Capybara Counter Task {self.task}')
         if not self.check_options() or not self.read_data():
             self.abort()
             return
@@ -112,8 +114,8 @@ class Counter(Worker):
             answer = len(root.event_vectors)
         else:
             answer = root.num_subsolutions
-        self.log.info(f'Done! The result of Counter Task {self.task+1} is {answer}')
-        self.verbose_print(f'Job done! The answer is {answer}')
+        self.log.info(f'{self.id} Done! The result of Counter Task {self.task+1} is {answer}')
+        self.verbose_print(f'{self.id} Job done! The answer is {answer}')
         self.finish()
         return answer
 
@@ -139,21 +141,21 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
         try:
             self.writer = open(self.output_name, 'w')
         except PermissionError:
-            self.log.error('Permission denied.')
+            self.log.error(f'{self.id} Permission denied.')
             return False
-        self.log.info(f'Output file: {os.path.abspath(self.output_name)}')
+        self.log.info(f'{self.id} Output file: {os.path.abspath(self.output_name)}')
         # check maximum and acyclic
         if self.maximum != float('Inf'):
             try:
                 self.maximum = int(self.maximum)
             except ValueError:
-                self.log.error('The maximum is not valid.')
+                self.log.error(f'{self.id} The maximum is not valid.')
                 return False
             if self.maximum <= 0:
-                self.log.error('The maximum is not valid.')
+                self.log.error(f'{self.id} The maximum is not valid.')
                 return False
         if self.task == 0 and self.acyclic_only not in (True, False):
-            self.log.error('Acyclic should be either True or False.')
+            self.log.error(f'{self.id} Acyclic should be either True or False.')
             return False
         return True
 
@@ -167,7 +169,7 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
 
     def run(self, label=''):
         self.start()
-        self.log.info(f'Running Capybara Enumerator Task {self.task}')
+        self.log.info(f'{self.id} Running Capybara Enumerator Task {self.task}')
         if not self.check_options() or not self.read_data():
             self.abort()
             return
@@ -184,18 +186,18 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
             self.writer.write('#--------------------\n')
             if self.maximum == float('Inf'):
                 if self.task == 0 and self.acyclic_only:
-                    self.log.info(f'Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}')
+                    self.log.info(f'{self.id} Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}')
                     self.writer.write(f'#Number of acyclic solutions = {self.num_acyclic} out of {self.num_solutions}\n')
                 else:
-                    self.log.info(f'Number of solutions = {self.num_acyclic}')
+                    self.log.info(f'{self.id} Number of solutions = {self.num_acyclic}')
                     self.writer.write(f'#Number of solutions = {self.num_acyclic}\n')
             else:
-                self.log.info(f'Number of output solutions = {self.num_acyclic} (maximum {self.maximum})')
+                self.log.info(f'{self.id} Number of output solutions = {self.num_acyclic} (maximum {self.maximum})')
                 self.writer.write(f'#Number of output solutions = {self.num_acyclic} (maximum {self.maximum})\n')
         except ValueError:  # aborted
             return
-        self.verbose_print(f'Job done! {self.num_acyclic} solutions written to {self.output_name}')
-        self.log.info(f'Done! {self.num_acyclic} solutions written to {self.output_name}')
+        self.verbose_print(f'{self.id} Job done! {self.num_acyclic} solutions written to {self.output_name}')
+        self.log.info(f'{self.id} Done! {self.num_acyclic} solutions written to {self.output_name}')
         self.finish()
 
     def write_task_title(self, task):

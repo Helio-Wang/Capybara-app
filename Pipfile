@@ -4,12 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-PyInstaller = ">=3.6"
+PyInstaller = "==3.6"
 
 [packages]
 pip = "*"
 setuptools = "*"
 pyqt5 = "==5.12"
+pyinstaller = "*"
 
 [requires]
 python_version = "3.6"
