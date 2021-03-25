@@ -235,7 +235,7 @@ class ReconciliatorCounter(Reconciliator):
 
 class ReconciliatorEnumerator(Reconciliator):
     def __init__(self, host_tree, parasite_tree, leaf_map,
-                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum, cli):
+                 cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task, maximum, cli=False):
         super().__init__(host_tree, parasite_tree, leaf_map,
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
 

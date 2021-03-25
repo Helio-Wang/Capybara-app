@@ -5,16 +5,17 @@ from capybara.eucalypt.util import full_flatten
 
 class EventReconciliator(ReconciliatorEnumerator):
     """
-    Recover optimal solutions knowing all events or all event and non-host-switch hosts
+    Recover optimal solutions knowing all events or all events and non-host-switch hosts
     """
     def __init__(self, host_tree, parasite_tree, leaf_map,
                  cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold, task,
-                 mapping, events):
+                 mapping, events, accumulate=False):
         super().__init__(host_tree, parasite_tree, leaf_map, cospeciation_cost, duplication_cost,
-                         transfer_cost, loss_cost, distance_threshold, task, 0)
+                         transfer_cost, loss_cost, distance_threshold, task=0, maximum=float('Inf'), cli=not accumulate)
         self.task = task  # 2 or 3
         self.mapping = mapping
         self.events = events
+        self.accumulate = accumulate
 
     def fill_matrices_at(self, parasite, host):
         association = Association(parasite, host)
@@ -67,5 +68,5 @@ class EventReconciliator(ReconciliatorEnumerator):
                     # this is the only place where a solution object is created outside of a solution generator
                     self.subtree_matrix[row][column] = NestedSolution(children[0].cost, None,
                                                                       NestedSolution.MULTIPLE, None,
-                                                                      accumulate=False, children=children)
+                                                                      self.accumulate, children=children)
 

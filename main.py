@@ -288,7 +288,7 @@ class TaskBox(qtw.QGroupBox):
         self.boxAll = qtw.QCheckBox('T1: All solutions')
         self.boxEq1 = qtw.QCheckBox('T2: Event vectors')
         self.boxEq2 = qtw.QCheckBox('T3: Event partitions')
-        self.boxEq3 = qtw.QCheckBox('T4: Equivalence classes')
+        self.boxEq3 = qtw.QCheckBox('T4: CD-equivalence classes')
         self.boxAll.setChecked(True)
         self.boxAll.toggled.connect(lambda: self.validate(0, self.boxAll))
         self.boxEq1.toggled.connect(lambda: self.validate(1, self.boxEq1))
@@ -300,9 +300,9 @@ class TaskBox(qtw.QGroupBox):
                                'Two reconciliations are considered equivalent if they have the same event vector.</p>')
         self.boxEq2.setToolTip('The <b>event partition</b> of a reconciliation is a partition of the symbiont nodes '
                                'into three subsets: cospeciation, duplication, and host-switch nodes.<p>'
-                               'Two reconciliations are considered equivalent if, for each symbiont node,'
+                               'Two reconciliations are considered event-partition equivalent if, for each symbiont node,'
                                'the associated events are the same.</p>')
-        self.boxEq3.setToolTip('Two reconciliations are considered <b>equivalent</b> if, '
+        self.boxEq3.setToolTip('Two reconciliations are considered <b>CD-equivalent</b> if, '
                                'for each symbiont node, the associated events are the same, moreover, '
                                'the associated hosts are also the same except when the event is a host-switch.')
 
@@ -709,9 +709,10 @@ class ConvertWindow(MainAppWindow):
         self.btnOpen.setToolTip('<b>Open</b> an enumeration output file')
         self.btnEnumerate.setText('Run')
         self.btnEnumerate.setToolTip('<b>Run</b> file conversion for visualization')
+        self.btnEnumerate.setIcon(self.style().standardIcon(qtw.QStyle.SP_DialogOkButton))
         self.btnSave.setToolTip('<b>Save</b> the output to a DOT file')
         self.taskBox = ConvertOptionBox()
-        self.btnCopy = qtw.QPushButton('Copy', self, icon=self.style().standardIcon(qtw.QStyle.SP_DialogHelpButton))
+        self.btnCopy = qtw.QPushButton('Copy', self, icon=self.style().standardIcon(qtw.QStyle.SP_CommandLink))
         self.btnCopy.setFixedSize(80, 50)
         self.btnCopy.setToolTip('<b>Copy</b> the entire output to the clipboard')
         self.btnCopy.clicked.connect(self.copy_event)

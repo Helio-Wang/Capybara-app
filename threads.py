@@ -31,7 +31,7 @@ class CountThread(qt.QtCore.QThread):
         elif task == 2:
             self.sig.emit(f'Task {task+1}: Counting the number of event partitions...')
         else:
-            self.sig.emit(f'Task {task+1}: Counting the number of strong equivalence classes...')
+            self.sig.emit(f'Task {task+1}: Counting the number of CD-equivalence classes...')
 
     def run(self):
         self.sig.emit('===============')
@@ -58,7 +58,7 @@ class CountThread(qt.QtCore.QThread):
             elif task == 2:
                 self.sig.emit(f'Total number of event partitions = {root.num_subsolutions}')
             else:
-                self.sig.emit(f'Total number of strong equivalence classes = {root.num_subsolutions}')
+                self.sig.emit(f'Total number of CD-equivalence classes = {root.num_subsolutions}')
 
             self.sig.emit('------')
         self.sig.emit('Optimal cost = {}'.format(opt_cost))
@@ -105,7 +105,7 @@ class EnumerateThread(qt.QtCore.QThread, enumerator.SolutionsEnumerator):
         elif self.task == 2:
             self.sig.emit(f'Task {self.task+1}: Enumerate one solution per event partition...')
         else:
-            self.sig.emit(f'Task {self.task+1}: Enumerate one solution per strong equivalence class...')
+            self.sig.emit(f'Task {self.task+1}: Enumerate one solution per CD-equivalence class...')
 
     def run(self, label=''):
         self.sig.emit('===============')

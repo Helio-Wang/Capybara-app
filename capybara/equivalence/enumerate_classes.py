@@ -71,7 +71,7 @@ def fill_class_matrix(parasite_tree, host_tree, leaf_map, reachable_matrix, task
 
 def get_sub_solution_strong(left_sum, right_sum, node, parasite):
     """
-    Add the signature to a new class according the strong equivalence relation
+    Add the signature to a new class according the CD equivalence relation
     """
     if node.event == NestedSolution.HOST_SWITCH:
         return NestedClass.cartesian(left_sum, right_sum,

@@ -96,31 +96,31 @@ class ClassEnumerator:
         for signature, nodes in root_nodes.items():
             self.root.mark(signature, nodes)
 
-            for c in self.f(self.root):
+            for c in self.recurse(self.root):
                 yield self.enum_tree.traverse()
 
-    def f(self, current):
+    def recurse(self, current):
         if current.is_leaf():
             yield current
             return
 
         base_nodes = current.nodes.copy()
 
-        for left_signature, left_nodes in self.f_side(current, 0):
+        for left_signature, left_nodes in self.recurse_side(current, 0):
             current.left_child.mark(left_signature, left_nodes)
 
-            for left in self.f(current.left_child):
+            for left in self.recurse(current.left_child):
                 root_update(current, base_nodes, 0)
 
                 second_base_nodes = current.nodes.copy()
-                for right_signature, right_nodes in self.f_side(current, 1):
+                for right_signature, right_nodes in self.recurse_side(current, 1):
                     current.right_child.mark(right_signature, right_nodes)
 
-                    for right in self.f(current.right_child):
+                    for right in self.recurse(current.right_child):
                         root_update(current, second_base_nodes, 1)
                         yield current
 
-    def f_side(self, current, position):
+    def recurse_side(self, current, position):
         all_nodes = {}
         for parent_node in current.nodes:
             for node in get_grandchildren(parent_node, position):

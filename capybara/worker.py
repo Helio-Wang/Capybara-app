@@ -7,6 +7,7 @@ import uuid
 from capybara.eucalypt import nexparser, enumerator, cyclicity
 from capybara.interface import DataInterface
 from capybara.equivalence import poly_enum_class as cenu
+from capybara.equivalence import analyze_one_equivalence as inv
 
 
 logger = logging.getLogger('capybara')
@@ -267,4 +268,84 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
             if num_class >= self.maximum:
                 break
         self.num_acyclic = num_class
+
+
+class EventVectorWrapper:
+    """
+    A wrapper for the event vector that supports the analyses on the corresponding class
+    """
+    def __init__(self, vector, data, root):
+        self.vector = vector
+        self.enumerator = inv.VectorEnumerator(self.vector, data, root)
+
+    def __str__(self):
+        return str(self.vector)
+
+    def get_size(self):
+        return self.enumerator.get_size()
+
+    def print_one_representative(self):
+        print(self.enumerator.get_one_representative())
+
+
+class EquivalenceClassWrapper:
+    """
+    A wrapper for the event partition or CD-equivalence class that supports the analyses
+    """
+    def __init__(self, mapping, events, task, data, root, cost_vector):
+        self.mapping = mapping
+        self.events = events
+        self.data = data
+        self.enumerator = inv.EventEnumerator(mapping, events, task, data, root, cost_vector)
+
+    def __str__(self):
+        text = []
+        for p in self.data.parasite_tree:
+            text.append(f'{str(p)}@{"?" if not self.mapping[p] else str(self.mapping[p])}|'
+                        f'{"CDS L"[self.events[p]]}')
+        return ', '.join(text)
+
+    def get_size(self):
+        return self.enumerator.get_size()
+
+    def print_one_representative(self):
+        print(self.enumerator.get_one_representative())
+
+
+class Generator(Worker):
+    """
+    Generate the equivalence classes one by one
+    """
+    def __init__(self, input_name, task, cost_vector, verbose):
+        super().__init__(input_name, task, cost_vector, verbose)
+
+    def check_options(self):
+        # check input and cost vector
+        if not super().check_options():
+            return False
+        # disable task 0
+        if self.task == 0:
+            self.log.error(f'{self.id} Cannot run the generator with task 1.')
+            return False
+        return True
+
+    def run(self):
+        self.start()
+        self.log.info(f'{self.id} Running Capybara Generator Task {self.task}')
+        if not self.check_options() or not self.read_data():
+            self.abort()
+            return
+        opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, float('Inf'), True)
+        num_classes = 0
+        if self.task == 1:
+            for vector in root.event_vectors:
+                num_classes += 1
+                yield EventVectorWrapper(vector, self.data, root)
+        else:
+            class_enumerator = cenu.ClassEnumerator(self.data.parasite_tree, root, self.task)
+            for mapping, events in class_enumerator.run():
+                num_classes += 1
+                yield EquivalenceClassWrapper(mapping, events, self.task, self.data, root, self.cost_vector)
+        self.log.info(f'{self.id} Done! {num_classes} solutions generated')
+        self.finish()
 
