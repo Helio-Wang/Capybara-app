@@ -240,7 +240,10 @@ class ReconciliatorEnumerator(Reconciliator):
                          cospeciation_cost, duplication_cost, transfer_cost, loss_cost, distance_threshold)
 
         if task == 1:
-            self.solution_generator = SolutionGeneratorEventVector()
+            if cli:
+                self.solution_generator = SolutionGeneratorEventVectorCounter()
+            else:
+                self.solution_generator = SolutionGeneratorEventVector()
         elif not cli and task == 0 and maximum == float('Inf'):
             self.solution_generator = SolutionGenerator(True)
         else:

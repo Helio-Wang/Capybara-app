@@ -174,7 +174,7 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
         if not self.check_options() or not self.read_data():
             self.abort()
             return
-        opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, self.maximum)
+        opt_cost, root = self.data.enumerate_solutions_setup(self.cost_vector, self.task, self.maximum, cli=True)
         try:
             self.write_header(opt_cost, self.task, self.cost_vector)
             self.root = root
@@ -218,7 +218,7 @@ class Enumerator(Worker, enumerator.SolutionsEnumerator):
             num_class += 1
             if num_class >= self.maximum:
                 break
-            self.writer.write(f'{str(target_vector.vector)}\n')
+            self.writer.write(f'{str(target_vector.vector)} of size {target_vector.num_subsolutions}\n')
         self.num_acyclic = num_class
 
     def loop_enumerate(self):
