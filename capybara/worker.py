@@ -274,15 +274,15 @@ class EventVectorWrapper:
     """
     A wrapper for the event vector that supports the analyses on the corresponding class
     """
-    def __init__(self, vector, data, root):
+    def __init__(self, vector, root):
         self.vector = vector
-        self.enumerator = inv.VectorEnumerator(self.vector, data, root)
+        self.enumerator = inv.VectorEnumerator(self.vector, root)
 
     def __str__(self):
         return str(self.vector)
 
     def get_size(self):
-        return self.enumerator.get_size()
+        return self.vector.num_subsolutions
 
     def print_one_representative(self):
         print(self.enumerator.get_one_representative())
@@ -340,7 +340,7 @@ class Generator(Worker):
         if self.task == 1:
             for vector in root.event_vectors:
                 num_classes += 1
-                yield EventVectorWrapper(vector, self.data, root)
+                yield EventVectorWrapper(vector, root)
         else:
             class_enumerator = cenu.ClassEnumerator(self.data.parasite_tree, root, self.task)
             for mapping, events in class_enumerator.run():
