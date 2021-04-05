@@ -36,6 +36,7 @@ def fill_class_matrix(parasite_tree, host_tree, leaf_map, reachable_matrix, task
     """
     Build the class enumeration graph by merging
     """
+    signature_func = get_sub_solution_event_partition if task == 2 else get_sub_solution_strong
     class_matrix = [[NestedClass.empty_class() for _ in range(host_tree.size())] for _ in range(parasite_tree.size())]
     for p in parasite_tree:
         if p.is_leaf():
@@ -56,10 +57,7 @@ def fill_class_matrix(parasite_tree, host_tree, leaf_map, reachable_matrix, task
                         right_sum = NestedClass.merge(right_sum, class_matrix[p2.index][right_association.host.index])
 
                     # relabel the association and the event according to the equivalence relation
-                    if task == 2:
-                        sub_sol = get_sub_solution_event_partition(left_sum, right_sum, node, p)
-                    else:  # task 3
-                        sub_sol = get_sub_solution_strong(left_sum, right_sum, node, p)
+                    sub_sol = signature_func(left_sum, right_sum, node, p)
 
                     class_matrix[p.index][h.index] = NestedClass.merge(class_matrix[p.index][h.index], sub_sol)
 

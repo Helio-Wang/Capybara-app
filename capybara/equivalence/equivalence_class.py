@@ -66,9 +66,11 @@ class NestedClassWrapper:
         self._full_right = None
 
     def __eq__(self, other):
-        if self.solution.composition_type == NestedSolution.MULTIPLE or other.solution.composition_type == NestedSolution.MULTIPLE:
+        if self.solution.composition_type == NestedSolution.MULTIPLE or \
+                other.solution.composition_type == NestedSolution.MULTIPLE:
             raise NotImplementedError
-        if self.solution.association != other.solution.association or self.solution.event != other.solution.event:
+        if self.solution.association != other.solution.association or \
+                self.solution.event != other.solution.event:
             return False
         return hash(self) == hash(other)
 

@@ -283,13 +283,13 @@ class TaskBox(qtw.QGroupBox):
         self.setTitle('Task')
         self.setMaximumWidth(300)
         self.tasks = {0}
-        self.last_check = None
 
         self.boxAll = qtw.QCheckBox('T1: All solutions')
         self.boxEq1 = qtw.QCheckBox('T2: Event vectors')
         self.boxEq2 = qtw.QCheckBox('T3: Event partitions')
         self.boxEq3 = qtw.QCheckBox('T4: CD-equivalence classes')
         self.boxAll.setChecked(True)
+        self.last_check = self.boxAll
         self.boxAll.toggled.connect(lambda: self.validate(0, self.boxAll))
         self.boxEq1.toggled.connect(lambda: self.validate(1, self.boxEq1))
         self.boxEq2.toggled.connect(lambda: self.validate(2, self.boxEq2))

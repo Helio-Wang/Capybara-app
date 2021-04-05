@@ -26,7 +26,7 @@ class TestWorker:
                              self.host_tree, self.parasite_tree, self.leaf_map,
                              cost_vector[0] * self.multiplier, cost_vector[1] * self.multiplier,
                              cost_vector[2] * self.multiplier, cost_vector[3] * self.multiplier, float('Inf'),
-                             self.task)
+                             self.task, True)
 
     def get_answer(self):
         opt = self.reconciliator.run()

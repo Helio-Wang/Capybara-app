@@ -62,7 +62,8 @@ class EnumTreeNode(TreeNode):
 
 
 class EnumTree:
-    def __init__(self, parasite_tree):
+    def __init__(self, parasite_tree, task):
+        self.task = task
         self.tree = {p: EnumTreeNode(p.key, p.label) for p in parasite_tree}
         for p in parasite_tree:
             if not p.is_leaf():
@@ -80,13 +81,15 @@ class EnumTree:
 
 class ClassEnumerator:
     def __init__(self, parasite_tree, optimal_solutions, task):
-        self.enum_tree = EnumTree(parasite_tree)
+        self.enum_tree = EnumTree(parasite_tree, task)
         self.root = self.enum_tree.tree[parasite_tree.root]
         self.optimal_solutions = optimal_solutions
         if task == 2:
             self.signature_update = signature_update_event_partition
-        else:
+        elif task == 3:
             self.signature_update = signature_update_strong_class
+        else:
+            self.signature_update = signature_update_strong_loss_class
 
     def run(self):
         root_nodes = {}
